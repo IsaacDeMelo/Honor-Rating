@@ -12,6 +12,7 @@ export interface IRpg {
   year?: string
   ageRating: string
   featured?: boolean
+  featuredOrder?: number
   blurImage?: boolean
   limitedEdition?: boolean
   slotsTotal?: number
@@ -34,6 +35,7 @@ const rpgSchema = new Schema<IRpg>({
   year: String,
   ageRating: { type: String, required: true },
   featured: { type: Boolean, default: false },
+  featuredOrder: { type: Number, default: 0 },
   blurImage: { type: Boolean, default: false },
   limitedEdition: { type: Boolean, default: false },
   slotsTotal: Number,

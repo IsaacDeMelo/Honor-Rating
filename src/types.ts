@@ -15,6 +15,7 @@ export interface RPG {
   year?: string
   ageRating: string
   featured?: boolean
+  featuredOrder?: number
   blurImage?: boolean
   limitedEdition?: boolean
   slotsTotal?: number

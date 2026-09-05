@@ -6,6 +6,7 @@ import SessionModel from './models/Session'
 import AdModel from './models/Ad'
 import EventPostModel from './models/EventPost'
 import ReviewReplyModel from './models/ReviewReply'
+import ReportModel from './models/Report'
 import VisitModel, { VisitType } from './models/Visit'
 import { RPG, Review, ReviewInput, User, ReviewReply, EventPost } from './types'
 
@@ -41,6 +42,7 @@ function rpgFromDoc(doc: any): RPG {
     year: o.year,
     ageRating: o.ageRating,
     featured: o.featured ?? false,
+    featuredOrder: o.featuredOrder ?? 0,
     blurImage: o.blurImage ?? false,
     limitedEdition: o.limitedEdition ?? false,
     slotsTotal: o.slotsTotal,
@@ -206,8 +208,23 @@ export async function toggleFeaturedRpg(name: string): Promise<RPG | undefined> 
   const rpg = await Rpg.findOne({ name })
   if (!rpg) return undefined
   rpg.featured = !rpg.featured
+  if (rpg.featured && !rpg.featuredOrder) {
+    const max = await Rpg.findOne({ featured: true }).sort({ featuredOrder: -1 })
+    rpg.featuredOrder = (max?.featuredOrder ?? 0) + 1
+  }
   await rpg.save()
   return rpgFromDoc(rpg)
+}
+
+export async function setFeaturedOrder(orders: { name: string; order: number }[]): Promise<void> {
+  for (const o of orders) {
+    await Rpg.updateOne({ name: o.name }, { $set: { featuredOrder: o.order } })
+  }
+}
+
+export async function getFeaturedRpgs(): Promise<RPG[]> {
+  const docs = await Rpg.find({ featured: true }).sort({ featuredOrder: 1, name: 1 })
+  return docs.map(rpgFromDoc)
 }
 
 export async function deleteRpg(name: string): Promise<boolean> {
@@ -611,23 +628,34 @@ export async function recordVisit(type: VisitType, data?: { rpg?: string; query?
 export interface AnalyticsDailyCount {
   day: string
   count: number
+  pageview: number
+  rpgview: number
+  search: number
 }
 
 export interface AnalyticsSummary {
   totalVisits: number
   totalRpgViews: number
   totalSearches: number
+  last7: { visits: number; rpgViews: number; searches: number }
+  avgPerDay: number
+  peakDay: { day: string; count: number } | null
   topRpgs: { rpg: string; count: number }[]
   topSearches: { query: string; count: number }[]
   daily: AnalyticsDailyCount[]
+  recent: { type: VisitType; rpg?: string; query?: string; createdAt: string }[]
+  byRpg?: { rpg: string; views: number; reviews: number; avgRating: number }[]
 }
 
 export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
   const since = new Date()
   since.setUTCHours(0, 0, 0, 0)
   since.setUTCDate(since.getUTCDate() - 13)
+  const since7 = new Date()
+  since7.setUTCHours(0, 0, 0, 0)
+  since7.setUTCDate(since7.getUTCDate() - 6)
 
-  const [totalVisits, totalRpgViews, totalSearches, topRpgs, topSearches, daily] = await Promise.all([
+  const [totalVisits, totalRpgViews, totalSearches, topRpgs, topSearches, daily, last7visits, last7rpg, last7search, recentDocs] = await Promise.all([
     VisitModel.countDocuments({ type: 'pageview' }),
     VisitModel.countDocuments({ type: 'rpgview' }),
     VisitModel.countDocuments({ type: 'search' }),
@@ -643,7 +671,7 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
       { $sort: { count: -1 } },
       { $limit: 10 },
     ]),
-    VisitModel.aggregate<{ _id: string; count: number }>([
+    VisitModel.aggregate<{ _id: string; count: number; pageview: number; rpgview: number; search: number }>([
       { $match: { createdAt: { $gte: since } } },
       {
         $group: {
@@ -651,27 +679,126 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
           },
           count: { $sum: 1 },
+          pageview: { $sum: { $cond: [{ $eq: ['$type', 'pageview'] }, 1, 0] } },
+          rpgview: { $sum: { $cond: [{ $eq: ['$type', 'rpgview'] }, 1, 0] } },
+          search: { $sum: { $cond: [{ $eq: ['$type', 'search'] }, 1, 0] } },
         },
       },
       { $sort: { _id: 1 } },
     ]),
+    VisitModel.countDocuments({ type: 'pageview', createdAt: { $gte: since7 } }),
+    VisitModel.countDocuments({ type: 'rpgview', createdAt: { $gte: since7 } }),
+    VisitModel.countDocuments({ type: 'search', createdAt: { $gte: since7 } }),
+    VisitModel.find().sort({ createdAt: -1 }).limit(20),
   ])
 
-  const dayMap = new Map(daily.map(d => [d._id, d.count]))
+  const dayMap = new Map(daily.map(d => [d._id, d]))
   const dates: AnalyticsDailyCount[] = []
   for (let i = 0; i < 14; i++) {
     const d = new Date(since)
     d.setUTCDate(d.getUTCDate() + i)
     const key = d.toISOString().slice(0, 10)
-    dates.push({ day: key, count: dayMap.get(key) || 0 })
+    const found = dayMap.get(key)
+    dates.push({ day: key, count: found?.count || 0, pageview: found?.pageview || 0, rpgview: found?.rpgview || 0, search: found?.search || 0 })
   }
+
+  const total14 = dates.reduce((a, d) => a + d.count, 0)
+  const peak = dates.reduce<{ day: string; count: number } | null>((acc, d) => (!acc || d.count > acc.count ? { day: d.day, count: d.count } : acc), null)
+
+  // Detalhe por RPG: views + reviews + média (top 10 por views)
+  let byRpg: { rpg: string; views: number; reviews: number; avgRating: number }[] | undefined
+  try {
+    const topNames = topRpgs.slice(0, 10).map(r => r._id)
+    if (topNames.length) {
+      const [revDocs] = await Promise.all([ReviewModel.find({ rpgName: { $in: topNames }, status: 'approved' })])
+      const agg: Record<string, { sum: number; count: number }> = {}
+      for (const rv of revDocs) {
+        if (!agg[rv.rpgName]) agg[rv.rpgName] = { sum: 0, count: 0 }
+        agg[rv.rpgName].sum += rv.rating
+        agg[rv.rpgName].count++
+      }
+      byRpg = topRpgs.slice(0, 10).map(r => ({
+        rpg: r._id,
+        views: r.count,
+        reviews: agg[r._id]?.count || 0,
+        avgRating: agg[r._id]?.count ? agg[r._id].sum / agg[r._id].count : 0,
+      }))
+    }
+  } catch { byRpg = undefined }
 
   return {
     totalVisits,
     totalRpgViews,
     totalSearches,
+    last7: { visits: last7visits, rpgViews: last7rpg, searches: last7search },
+    avgPerDay: Math.round((total14 / 14) * 10) / 10,
+    peakDay: peak,
     topRpgs: topRpgs.map(r => ({ rpg: r._id, count: r.count })),
     topSearches: topSearches.map(r => ({ query: r._id, count: r.count })),
     daily: dates,
+    recent: recentDocs.map(d => ({
+      type: d.type,
+      rpg: d.rpg,
+      query: d.query,
+      createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt),
+    })),
+    byRpg,
   }
+}
+
+// ── DENÚNCIAS ──
+export type ReportReason = 'golpe' | 'inativo' | 'falso'
+export type ReportStatus = 'pending' | 'dismissed' | 'actioned'
+
+export interface Report {
+  id: string
+  rpgName: string
+  reporter?: string
+  reason: ReportReason
+  description: string
+  evidence?: string
+  status: ReportStatus
+  adminNote?: string
+  createdAt: string
+  resolvedAt?: string
+}
+
+function reportFromDoc(doc: any): Report {
+  const o = doc.toObject ? doc.toObject() : doc
+  return {
+    id: String(o._id),
+    rpgName: o.rpgName,
+    reporter: o.reporter,
+    reason: o.reason,
+    description: o.description,
+    evidence: o.evidence,
+    status: o.status || 'pending',
+    adminNote: o.adminNote,
+    createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+    resolvedAt: o.resolvedAt ? (o.resolvedAt instanceof Date ? o.resolvedAt.toISOString() : o.resolvedAt) : undefined,
+  }
+}
+
+export async function addReport(input: { rpgName: string; reporter?: string; reason: ReportReason; description: string; evidence?: string }): Promise<Report> {
+  const doc = await ReportModel.create(input)
+  return reportFromDoc(doc)
+}
+
+export async function getReports(status?: string): Promise<Report[]> {
+  const filter: Record<string, any> = status && status !== 'all' ? { status } : {}
+  const docs = await ReportModel.find(filter).sort({ createdAt: -1 }).limit(200)
+  return docs.map(reportFromDoc)
+}
+
+export async function getPendingReportsCount(): Promise<number> {
+  return ReportModel.countDocuments({ status: 'pending' })
+}
+
+export async function resolveReport(id: string, action: 'dismiss' | 'resolve', adminNote?: string): Promise<Report | undefined> {
+  const doc = await ReportModel.findByIdAndUpdate(
+    id,
+    { status: action === 'dismiss' ? 'dismissed' : 'actioned', adminNote: adminNote || undefined, resolvedAt: new Date() },
+    { new: true },
+  )
+  return doc ? reportFromDoc(doc) : undefined
 }

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
 import { Readable } from 'stream'
-import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats } from '../data'
+import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason } from '../data'
 import ReviewModel from '../models/Review'
 import { ReviewInput, RPG } from '../types'
 
@@ -298,6 +298,21 @@ router.patch('/rpgs/:name/featured', async (req: Request, res: Response) => {
   res.json(rpg)
 })
 
+router.patch('/rpgs/featured-order', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const token = authHeader.replace('Bearer ', '')
+  const user = await getUserByToken(token)
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  const { orders } = req.body || {}
+  if (!Array.isArray(orders)) { res.status(400).json({ error: 'orders deve ser uma lista [{name, order}].' }); return }
+  const clean = orders
+    .filter(o => o && typeof o.name === 'string' && typeof o.order === 'number')
+    .map(o => ({ name: String(o.name), order: Number(o.order) }))
+  await setFeaturedOrder(clean)
+  res.json({ ok: true, updated: clean.length })
+})
+
 router.delete('/rpgs/:name', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization
   if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
@@ -564,6 +579,58 @@ router.delete('/replies/:id', async (req: Request, res: Response) => {
   const ok = await deleteReviewReply(String(req.params.id), user.username, user.role === 'admin')
   if (!ok) { res.status(403).json({ error: 'Sem permissão ou resposta não encontrada.' }); return }
   res.json({ message: 'Resposta excluída.' })
+})
+
+// ── DENÚNCIAS ──
+router.post('/reports', async (req: Request, res: Response) => {
+  const { rpgName, reason, description, evidence } = req.body || {}
+  if (!rpgName || !reason || !description) { res.status(400).json({ error: 'Campos obrigatórios: rpgName, reason, description.' }); return }
+  if (!['golpe', 'inativo', 'falso'].includes(reason)) { res.status(400).json({ error: 'Motivo inválido.' }); return }
+  if (String(description).trim().length < 5) { res.status(400).json({ error: 'Descreva com um pouco mais de detalhe.' }); return }
+  const rpg = await getRpgByName(String(rpgName))
+  if (!rpg) { res.status(404).json({ error: 'RPG não encontrado.' }); return }
+  let reporter: string | undefined
+  const authHeader = req.headers.authorization
+  if (authHeader) {
+    const u = await getUserByToken(authHeader.replace('Bearer ', ''))
+    if (u) reporter = u.username
+  }
+  const report = await addReport({
+    rpgName: String(rpgName),
+    reporter,
+    reason: reason as ReportReason,
+    description: String(description).slice(0, 2000),
+    evidence: evidence ? String(evidence).slice(0, 2000) : undefined,
+  })
+  res.status(201).json(report)
+})
+
+router.get('/reports', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  res.json(await getReports(String(req.query.status || 'all')))
+})
+
+router.get('/reports/pending-count', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  res.json({ pending: await getPendingReportsCount() })
+})
+
+router.patch('/reports/:id', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  const { action, adminNote } = req.body || {}
+  if (!['dismiss', 'resolve'].includes(action)) { res.status(400).json({ error: 'action deve ser dismiss ou resolve.' }); return }
+  const updated = await resolveReport(String(req.params.id), action, adminNote ? String(adminNote) : undefined)
+  if (!updated) { res.status(404).json({ error: 'Denúncia não encontrada.' }); return }
+  res.json(updated)
 })
 
 export default router

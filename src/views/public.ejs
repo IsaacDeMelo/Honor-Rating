@@ -824,6 +824,11 @@ const seoCount = seoRevs.length;
                 <i class="fa-solid fa-award"></i>
                 Criadores
               </button>
+              <button onclick="abrirModalDenuncias()" class="py-2.5 px-3 rounded-xl text-[11px] font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-2 relative" style="background: color-mix(in srgb, #ef4444 15%, transparent); color: #f87171; border: 1px solid color-mix(in srgb, #ef4444 35%, transparent);">
+                <i class="fa-solid fa-flag"></i>
+                Denúncias
+                <span id="reports-count-badge" class="hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full items-center justify-center text-[8px] font-bold flex" style="background: #ef4444; color: white;">0</span>
+              </button>
             </div>
           </div>
 
@@ -996,6 +1001,11 @@ const seoCount = seoRevs.length;
             </button>
             <button id="btn-deletar-detalhe" onclick="deletarRpgDoDetalhe()" class="hidden px-3 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-1.5" style="background: transparent; color: #f87171; border: 1px solid rgba(248,113,113,0.3);">
               <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          <div class="flex justify-end">
+            <button onclick="abrirModalDenuncia()" class="text-[10px] underline opacity-60 hover:opacity-100 transition" style="color:var(--text-muted);" title="Reportar problema neste RPG">
+              <i class="fa-solid fa-flag text-[8px] mr-1"></i>denunciar
             </button>
           </div>
 
@@ -1271,7 +1281,8 @@ const seoCount = seoRevs.length;
           </button>
         </div>
         <div class="p-4 space-y-2">
-          <p class="text-[10px] leading-relaxed mb-3" style="color: var(--text-muted);">Os RPGs marcados aparecem no topo do carrossel do catálogo e na seção "Em Destaque" do feed.</p>
+          <p class="text-[10px] leading-relaxed mb-1" style="color: var(--text-muted);">Os RPGs marcados aparecem no topo do carrossel do catálogo e na seção "Em Destaque" do feed.</p>
+          <p class="text-[10px] leading-relaxed mb-3" style="color: var(--text-muted);"><i class="fa-solid fa-arrow-up-long mr-1"></i>Use as setas para definir a ordem do carrossel (1º = primeiro slide). A ordem é salva automaticamente.</p>
           <div id="destaques-list" class="space-y-2">
             <p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>
           </div>
@@ -1306,6 +1317,81 @@ const seoCount = seoRevs.length;
           </div>
           <div id="criadores-list" class="space-y-2">
             <p class="text-xs text-center py-6" style="color: var(--text-muted);">Nenhum criador cadastrado.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DENUNCIAR RPG -->
+    <div id="modal-denuncia" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: color-mix(in srgb, var(--bg-primary) 90%, transparent);">
+      <div class="rounded-3xl w-full max-w-md shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+        <div class="p-5 border-b flex justify-between items-center" style="border-color: var(--border); background: var(--bg-elevated);">
+          <h3 class="text-sm font-bold font-title flex items-center gap-2" style="color: var(--text-primary);">
+            <i class="fa-solid fa-flag" style="color:#f87171;"></i>
+            Denunciar <span id="denuncia-rpg-nome" class="truncate max-w-44"></span>
+          </h3>
+          <button onclick="fecharModalDenuncia()" class="p-2 rounded-xl transition" style="color: var(--text-muted);">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="p-4 space-y-3">
+          <p class="text-[10px] leading-relaxed" style="color:var(--text-muted);">Sua denúncia é anônima para outros usuários e vai direto para análise do admin. Escolha o motivo:</p>
+          <div class="grid grid-cols-3 gap-2" id="denuncia-motivos">
+            <button onclick="denunciaMotivo('golpe')" data-motivo="golpe" class="denuncia-motivo-btn rounded-xl p-3 text-center transition" style="background:var(--bg-input);border:1px solid var(--border);">
+              <i class="fa-solid fa-triangle-exclamation block text-base mb-1" style="color:#ef4444;"></i>
+              <span class="text-[11px] font-bold" style="color:var(--text-primary);">Golpe</span>
+              <span class="block text-[8px]" style="color:var(--text-muted);">fraude / roubo</span>
+            </button>
+            <button onclick="denunciaMotivo('inativo')" data-motivo="inativo" class="denuncia-motivo-btn rounded-xl p-3 text-center transition" style="background:var(--bg-input);border:1px solid var(--border);">
+              <i class="fa-solid fa-moon block text-base mb-1" style="color:#f59e0b;"></i>
+              <span class="text-[11px] font-bold" style="color:var(--text-primary);">Inativo</span>
+              <span class="block text-[8px]" style="color:var(--text-muted);">abandonado</span>
+            </button>
+            <button onclick="denunciaMotivo('falso')" data-motivo="falso" class="denuncia-motivo-btn rounded-xl p-3 text-center transition" style="background:var(--bg-input);border:1px solid var(--border);">
+              <i class="fa-solid fa-mask block text-base mb-1" style="color:var(--accent);"></i>
+              <span class="text-[11px] font-bold" style="color:var(--text-primary);">Falso</span>
+              <span class="block text-[8px]" style="color:var(--text-muted);">info falsa</span>
+            </button>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);" id="denuncia-desc-label">Descreva *</label>
+            <textarea id="denuncia-desc" rows="3" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none resize-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Conte o que aconteceu..."></textarea>
+          </div>
+          <div id="denuncia-prova-box" class="hidden">
+            <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Provas (links, prints hospedados, contatos) *</label>
+            <textarea id="denuncia-prova" rows="2" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none resize-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Cole links de prints, conversas, chaves pix cobradas, etc."></textarea>
+            <p class="text-[9px] mt-1" style="color:var(--text-muted);">Dica: suba prints em um site de imagens e cole o link aqui.</p>
+          </div>
+          <p id="denuncia-error" class="hidden text-[10px] font-bold" style="color: #ef4444;"></p>
+          <p id="denuncia-ok" class="hidden text-[10px] font-bold" style="color: #22c55e;"></p>
+          <button onclick="enviarDenuncia()" id="denuncia-enviar-btn" class="w-full text-white font-bold py-2.5 rounded-xl text-xs transition-all active:scale-[0.97]" style="background: #ef4444;">
+            <i class="fa-solid fa-paper-plane"></i> Enviar denúncia
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DENÚNCIAS (ADMIN) -->
+    <div id="modal-denuncias" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: color-mix(in srgb, var(--bg-primary) 90%, transparent);">
+      <div class="rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+        <div class="p-5 border-b flex justify-between items-center sticky top-0 z-10" style="border-color: var(--border); background: var(--bg-elevated);">
+          <h3 class="text-sm font-bold font-title flex items-center gap-2" style="color: var(--text-primary);">
+            <i class="fa-solid fa-flag" style="color:#f87171;"></i>
+            Denúncias
+          </h3>
+          <button onclick="fecharModalDenuncias()" class="p-2 rounded-xl transition" style="color: var(--text-muted);">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="denunciasFiltro='pending';renderDenunciasAdmin()" id="den-f-pending" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Pendentes</button>
+            <button onclick="denunciasFiltro='all';renderDenunciasAdmin()" id="den-f-all" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Todas</button>
+            <button onclick="denunciasFiltro='actioned';renderDenunciasAdmin()" id="den-f-actioned" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Resolvidas</button>
+            <button onclick="denunciasFiltro='dismissed';renderDenunciasAdmin()" id="den-f-dismissed" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Ignoradas</button>
+          </div>
+          <div id="denuncias-list" class="space-y-2">
+            <p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>
           </div>
         </div>
       </div>
@@ -1480,31 +1566,44 @@ const seoCount = seoRevs.length;
             <div class="rounded-2xl p-4 text-center" style="background: var(--bg-elevated); border: 1px solid var(--border);">
               <p class="text-2xl font-bold" style="color: var(--text-primary);" id="mon-total-visits">—</p>
               <p class="text-[9px] font-bold mt-1 uppercase tracking-wider" style="color: var(--text-muted);">Visitas</p>
+              <p class="text-[9px] mt-1" style="color:var(--text-muted);" id="mon-last7-visits"></p>
             </div>
             <div class="rounded-2xl p-4 text-center" style="background: var(--bg-elevated); border: 1px solid var(--border);">
               <p class="text-2xl font-bold" style="color: var(--text-primary);" id="mon-total-rpgviews">—</p>
               <p class="text-[9px] font-bold mt-1 uppercase tracking-wider" style="color: var(--text-muted);">Páginas de RPG</p>
+              <p class="text-[9px] mt-1" style="color:var(--text-muted);" id="mon-last7-rpgviews"></p>
             </div>
             <div class="rounded-2xl p-4 text-center" style="background: var(--bg-elevated); border: 1px solid var(--border);">
               <p class="text-2xl font-bold" style="color: var(--text-primary);" id="mon-total-searches">—</p>
               <p class="text-[9px] font-bold mt-1 uppercase tracking-wider" style="color: var(--text-muted);">Buscas</p>
+              <p class="text-[9px] mt-1" style="color:var(--text-muted);" id="mon-last7-searches"></p>
             </div>
           </div>
 
+          <div id="mon-insights" class="rounded-2xl p-3 text-[10px] leading-relaxed" style="background:color-mix(in srgb, #10b981 8%, transparent);border:1px solid color-mix(in srgb, #10b981 25%, transparent);color:var(--text-secondary);"></div>
+
           <div>
-            <h4 class="text-[11px] font-bold font-title mb-2 flex items-center gap-2" style="color: var(--text-primary);">
-              <i class="fa-solid fa-calendar-day text-[10px]" style="color: #10b981;"></i>
-              Últimos 14 dias
-            </h4>
-            <div id="mon-daily" class="flex items-end gap-1 h-32 rounded-2xl p-3" style="background: var(--bg-elevated); border: 1px solid var(--border);">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-[11px] font-bold font-title flex items-center gap-2" style="color: var(--text-primary);">
+                <i class="fa-solid fa-calendar-day text-[10px]" style="color: #10b981;"></i>
+                Últimos 14 dias
+              </h4>
+              <div class="flex gap-1">
+                <button onclick="monTipo='all';abrirMonitoramento(true)" id="mon-f-all" class="px-2 py-1 rounded-lg text-[9px] font-bold">Todos</button>
+                <button onclick="monTipo='rpgview';abrirMonitoramento(true)" id="mon-f-rpg" class="px-2 py-1 rounded-lg text-[9px] font-bold">RPGs</button>
+                <button onclick="monTipo='search';abrirMonitoramento(true)" id="mon-f-search" class="px-2 py-1 rounded-lg text-[9px] font-bold">Buscas</button>
+              </div>
+            </div>
+            <div id="mon-daily" class="flex items-end gap-1 h-36 rounded-2xl p-3" style="background: var(--bg-elevated); border: 1px solid var(--border);">
               <p class="text-[10px] m-auto" style="color: var(--text-muted);">Carregando...</p>
             </div>
+            <p class="text-[9px] mt-1" style="color:var(--text-muted);">Passe o mouse nas barras para ver o detalhe por dia (visitas · RPG · buscas). Média/dia: <b id="mon-avg">—</b> · Pico: <b id="mon-peak">—</b></p>
           </div>
 
           <div>
             <h4 class="text-[11px] font-bold font-title mb-2 flex items-center gap-2" style="color: var(--text-primary);">
               <i class="fa-solid fa-fire text-[10px]" style="color: #f59e0b;"></i>
-              RPGs mais acessados
+              RPGs mais acessados <span class="text-[9px] font-normal" style="color:var(--text-muted);">· com avaliações e nota</span>
             </h4>
             <div id="mon-top-rpgs" class="space-y-2"></div>
           </div>
@@ -1517,37 +1616,77 @@ const seoCount = seoRevs.length;
             <div id="mon-top-searches" class="space-y-2"></div>
           </div>
 
+          <div>
+            <h4 class="text-[11px] font-bold font-title mb-2 flex items-center gap-2" style="color: var(--text-primary);">
+              <i class="fa-solid fa-clock-rotate-left text-[10px]" style="color:var(--text-muted);"></i>
+              Atividade recente
+            </h4>
+            <div id="mon-recent" class="space-y-1.5"></div>
+          </div>
+
         </div>
       </div>
     </div>
 
     <!-- MODAL PAINEL DO CRIADOR -->
     <div id="modal-painel-criador" onclick="if(event.target===this)fecharPainelCriador()" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: color-mix(in srgb, var(--bg-primary) 90%, transparent);">
-      <div class="rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+      <div class="rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border);">
         <div class="p-5 border-b flex justify-between items-center sticky top-0 z-10" style="border-color: var(--border); background: var(--bg-elevated);">
           <h3 class="text-sm font-bold font-title flex items-center gap-2" style="color: var(--text-primary);">
             <i class="fa-solid fa-chart-simple" style="color: #22c55e;"></i>
             Painel do Criador
+            <span id="painel-username-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;"></span>
           </h3>
           <button onclick="fecharPainelCriador()" class="p-2 rounded-xl transition" style="color: var(--text-muted);">
             <i class="fas fa-times"></i>
           </button>
         </div>
-        <div class="p-5 space-y-5">
-          <div id="painel-score-card" class="rounded-2xl p-5 flex items-center gap-4" style="background: linear-gradient(135deg, #22c55e, color-mix(in srgb, #22c55e 60%, #000));">
-            <div class="w-16 h-16 rounded-full flex items-center justify-center flex-col shrink-0" style="background: rgba(0,0,0,0.25); border: 2px solid rgba(255,255,255,0.4);">
-              <span class="text-xl font-bold font-title text-white leading-none" id="painel-score-valor">0</span>
-              <span class="text-[7px] font-bold text-white/80 uppercase tracking-wider mt-0.5">Score</span>
+        <div class="p-5 space-y-4">
+          <div id="painel-score-card" class="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4" style="background: linear-gradient(135deg, #22c55e, color-mix(in srgb, #22c55e 60%, #000));">
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+              <div class="w-16 h-16 rounded-full flex items-center justify-center flex-col shrink-0" style="background: rgba(0,0,0,0.25); border: 2px solid rgba(255,255,255,0.4);">
+                <span class="text-xl font-bold font-title text-white leading-none" id="painel-score-valor">0</span>
+                <span class="text-[7px] font-bold text-white/80 uppercase tracking-wider mt-0.5">Score</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold text-white" id="painel-nivel">Calculando...</p>
+                <div class="h-2 rounded-full mt-2 overflow-hidden" style="background:rgba(0,0,0,.3);">
+                  <div id="painel-score-bar" class="h-full rounded-full transition-all" style="width:0%;background:#fff;"></div>
+                </div>
+                <p class="text-[10px] leading-relaxed text-white/85 mt-2">Avaliações boas aumentam seu score e mantêm seus eventos no topo do feed por mais tempo.</p>
+              </div>
             </div>
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-white" id="painel-nivel">Calculando...</p>
-              <p class="text-[10px] leading-relaxed text-white/85 mt-1">Quanto mais avaliações boas seus sistemas tiverem, maior o seu score e mais tempo seus posts de evento ficam no topo do feed.</p>
+            <div class="grid grid-cols-3 gap-2 sm:w-56 shrink-0">
+              <div class="rounded-xl p-2.5 text-center" style="background:rgba(0,0,0,.25);">
+                <p class="text-base font-bold text-white" id="painel-total-views">—</p>
+                <p class="text-[8px] font-bold uppercase tracking-wider text-white/70">Acessos</p>
+              </div>
+              <div class="rounded-xl p-2.5 text-center" style="background:rgba(0,0,0,.25);">
+                <p class="text-base font-bold text-white" id="painel-total-reviews">—</p>
+                <p class="text-[8px] font-bold uppercase tracking-wider text-white/70">Avaliações</p>
+              </div>
+              <div class="rounded-xl p-2.5 text-center" style="background:rgba(0,0,0,.25);">
+                <p class="text-base font-bold text-white" id="painel-media-geral">—</p>
+                <p class="text-[8px] font-bold uppercase tracking-wider text-white/70">Nota média</p>
+              </div>
             </div>
           </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex rounded-xl overflow-hidden" style="border:1px solid var(--border);">
+              <button onclick="painelTab('todos')" id="painel-tab-todos" class="px-3 py-2 text-[11px] font-bold" style="background:var(--accent);color:#fff;">Todos</button>
+              <button onclick="painelTab('destaque')" id="painel-tab-destaque" class="px-3 py-2 text-[11px] font-bold" style="background:transparent;color:var(--text-muted);">Em alta</button>
+              <button onclick="painelTab('atencao')" id="painel-tab-atencao" class="px-3 py-2 text-[11px] font-bold" style="background:transparent;color:var(--text-muted);">Precisam atenção</button>
+            </div>
+            <div class="flex-1"></div>
+            <input id="painel-busca" oninput="painelFiltrar()" placeholder="Buscar sistema..." class="rounded-xl px-3 py-2 text-xs focus:outline-none w-44" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);">
+          </div>
+          <p id="painel-dica" class="text-[10px] leading-relaxed rounded-xl p-2.5" style="background:color-mix(in srgb, #f59e0b 10%, transparent);border:1px solid color-mix(in srgb, #f59e0b 30%, transparent);color:var(--text-secondary);"></p>
 
           <div class="flex items-center gap-2 px-1">
             <i class="fa-solid fa-gauge-high text-[10px]" style="color: #f59e0b;"></i>
             <span class="text-[11px] font-bold font-title" style="color: var(--text-primary);">Status dos seus sistemas</span>
+            <span id="painel-count" class="text-[10px]" style="color:var(--text-muted);"></span>
           </div>
           <div id="painel-rpgs" class="space-y-3">
             <p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>
@@ -1785,8 +1924,9 @@ const seoCount = seoRevs.length;
     }
 
     function computeHeroRpgs(rpgs) {
-      const limited = (rpgs || []).filter(r => r.limitedEdition);
-      const featured = (rpgs || []).filter(r => r.featured && !r.limitedEdition);
+      const byOrder = (a, b) => ((a.featuredOrder ?? 0) - (b.featuredOrder ?? 0)) || a.name.localeCompare(b.name);
+      const limited = (rpgs || []).filter(r => r.limitedEdition).sort(byOrder);
+      const featured = (rpgs || []).filter(r => r.featured && !r.limitedEdition).sort(byOrder);
       const combined = limited.concat(featured);
       return combined.length ? combined : (rpgs && rpgs[0] ? [rpgs[0]] : []);
     }
@@ -2646,24 +2786,47 @@ const seoCount = seoRevs.length;
       document.getElementById('modal-destaques').classList.add('modal-hidden');
     }
 
+    function destaquesOrdenados() {
+      return [...catRpgData].sort((a, b) => {
+        const fa = a.featured ? 0 : 1, fb = b.featured ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        return ((a.featuredOrder ?? 0) - (b.featuredOrder ?? 0)) || a.name.localeCompare(b.name);
+      });
+    }
+
     function renderDestaques() {
       const list = document.getElementById('destaques-list');
       if (!catRpgData.length) {
         list.innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Nenhum RPG cadastrado.</p>';
         return;
       }
-      list.innerHTML = catRpgData.map(r => `
+      const ordered = destaquesOrdenados();
+      let pos = 0;
+      list.innerHTML = ordered.map(r => {
+        const badge = r.featured ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:var(--accent);color:#fff;">#${++pos} no carrossel</span>` : `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);">fora</span>`;
+        return `
         <div class="rounded-2xl p-3 border flex items-center gap-3" style="background: color-mix(in srgb, var(--bg-card) 40%, transparent); border-color: var(--border);">
-          <img src="${r.image}" class="w-10 h-12 object-cover rounded-lg" alt="">
+          <img src="${r.image}" class="w-10 h-12 object-cover rounded-lg shrink-0" alt="">
           <div class="flex-1 min-w-0">
             <p class="text-xs font-bold truncate" style="color: var(--text-primary);">${r.name}</p>
             <p class="text-[10px] truncate" style="color: var(--text-muted);">${r.owner}</p>
+            <div class="mt-1">${badge}</div>
           </div>
-          <button onclick="toggleDestaque('${r.name.replace(/'/g, "\\'")}', this)" class="relative w-11 h-6 rounded-full transition-colors shrink-0" style="background: ${r.featured ? 'var(--accent)' : 'var(--text-muted)'};">
-            <span class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" style="${r.featured ? 'right:0.5;transform:translateX(-0)' : 'left:0.5;transform:translateX(0)'};left:${r.featured ? 'auto' : '0.5'};right:${r.featured ? '0.5' : 'auto'};"></span>
-          </button>
-        </div>
-      `).join('');
+          <div class="flex flex-col gap-1 shrink-0">
+            <div class="flex gap-1">
+              <button onclick="moverDestaque('${r.name.replace(/'/g, "\\'")}', -1)" title="Subir na ordem" class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] transition active:scale-90" style="background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--border);" ${r.featured ? '' : 'disabled style="opacity:.35;"'}>
+                <i class="fa-solid fa-chevron-up"></i>
+              </button>
+              <button onclick="moverDestaque('${r.name.replace(/'/g, "\\'")}', 1)" title="Descer na ordem" class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] transition active:scale-90" style="background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--border);" ${r.featured ? '' : 'disabled style="opacity:.35;"'}>
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+            </div>
+            <button onclick="toggleDestaque('${r.name.replace(/'/g, "\\'")}', this)" class="relative w-full h-6 rounded-full transition-colors" style="background: ${r.featured ? 'var(--accent)' : 'var(--text-muted)'};" title="${r.featured ? 'Remover dos destaques' : 'Adicionar aos destaques'}">
+              <span class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" style="${r.featured ? 'right:0.5;transform:translateX(-0)' : 'left:0.5;transform:translateX(0)'};left:${r.featured ? 'auto' : '0.5'};right:${r.featured ? '0.5' : 'auto'};"></span>
+            </button>
+          </div>
+        </div>`;
+      }).join('');
     }
 
     async function toggleDestaque(nome, btn) {
@@ -2675,14 +2838,198 @@ const seoCount = seoRevs.length;
           headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         if (!res.ok) { alert('Erro ao alterar destaque.'); return; }
-        rpg.featured = !rpg.featured;
-        const knob = btn.querySelector('span');
-        btn.style.background = rpg.featured ? 'var(--accent)' : 'var(--text-muted)';
-        if (rpg.featured) { knob.style.left = 'auto'; knob.style.right = '0.5'; }
-        else { knob.style.left = '0.5'; knob.style.right = 'auto'; }
+        const updated = await res.json();
+        rpg.featured = updated.featured;
+        if (updated.featuredOrder !== undefined) rpg.featuredOrder = updated.featuredOrder;
+        renderDestaques();
         atualizarHero();
         renderFeedDestaques();
       } catch { alert('Erro de conexão.'); }
+    }
+
+    async function moverDestaque(nome, dir) {
+      const feats = [...catRpgData].filter(r => r.featured).sort((a, b) => ((a.featuredOrder ?? 0) - (b.featuredOrder ?? 0)) || a.name.localeCompare(b.name));
+      const idx = feats.findIndex(r => r.name === nome);
+      if (idx < 0) return;
+      const j = idx + dir;
+      if (j < 0 || j >= feats.length) return;
+      const tmp = feats[idx];
+      feats[idx] = feats[j];
+      feats[j] = tmp;
+      const orders = feats.map((r, i) => ({ name: r.name, order: i + 1 }));
+      orders.forEach(o => { const rr = catRpgData.find(x => x.name === o.name); if (rr) rr.featuredOrder = o.order; });
+      renderDestaques();
+      atualizarHero();
+      renderFeedDestaques();
+      try {
+        await fetch('/api/rpgs/featured-order', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+          body: JSON.stringify({ orders }),
+        });
+      } catch {}
+    }
+
+    // ── DENÚNCIAS ──
+    let denunciaMotivoSel = null;
+    let denunciasCache = [];
+    let denunciasFiltro = 'pending';
+
+    function rpgAtualDenuncia() {
+      return document.getElementById('btn-avaliar-detalhe')?.dataset.rpg || modalRpgAtual || '';
+    }
+
+    function abrirModalDenuncia() {
+      const nome = rpgAtualDenuncia();
+      if (!nome) return;
+      denunciaMotivoSel = null;
+      document.getElementById('denuncia-rpg-nome').textContent = '· ' + nome;
+      document.getElementById('denuncia-desc').value = '';
+      document.getElementById('denuncia-prova').value = '';
+      document.getElementById('denuncia-prova-box').classList.add('hidden');
+      document.getElementById('denuncia-error').classList.add('hidden');
+      document.getElementById('denuncia-ok').classList.add('hidden');
+      document.querySelectorAll('.denuncia-motivo-btn').forEach(b => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg-input)'; });
+      document.getElementById('denuncia-desc-label').textContent = 'Descreva *';
+      document.getElementById('modal-denuncia').classList.remove('modal-hidden');
+    }
+
+    function fecharModalDenuncia() {
+      document.getElementById('modal-denuncia').classList.add('modal-hidden');
+    }
+
+    function denunciaMotivo(m) {
+      denunciaMotivoSel = m;
+      document.querySelectorAll('.denuncia-motivo-btn').forEach(b => {
+        const on = b.dataset.motivo === m;
+        b.style.borderColor = on ? '#ef4444' : 'var(--border)';
+        b.style.background = on ? 'color-mix(in srgb, #ef4444 12%, transparent)' : 'var(--bg-input)';
+      });
+      const box = document.getElementById('denuncia-prova-box');
+      const label = document.getElementById('denuncia-desc-label');
+      const desc = document.getElementById('denuncia-desc');
+      if (m === 'golpe') {
+        box.classList.remove('hidden');
+        label.textContent = 'O que aconteceu? *';
+        desc.placeholder = 'Ex: cobraram R$50 no pix para liberar vaga e sumiram...';
+      } else if (m === 'inativo') {
+        box.classList.add('hidden');
+        label.textContent = 'Por que acha que está inativo? *';
+        desc.placeholder = 'Ex: link quebrado, whatsapp não responde há meses, sem eventos...';
+      } else {
+        box.classList.add('hidden');
+        label.textContent = 'O que é falso? *';
+        desc.placeholder = 'Ex: nome/arte copiada de outro sistema, descrição enganosa...';
+      }
+    }
+
+    async function enviarDenuncia() {
+      const err = document.getElementById('denuncia-error');
+      const ok = document.getElementById('denuncia-ok');
+      err.classList.add('hidden'); ok.classList.add('hidden');
+      const nome = rpgAtualDenuncia();
+      const description = document.getElementById('denuncia-desc').value.trim();
+      const evidence = document.getElementById('denuncia-prova').value.trim();
+      if (!denunciaMotivoSel) { err.textContent = 'Escolha um motivo: Golpe, Inativo ou Falso.'; err.classList.remove('hidden'); return; }
+      if (description.length < 5) { err.textContent = 'Descreva com um pouco mais de detalhe.'; err.classList.remove('hidden'); return; }
+      if (denunciaMotivoSel === 'golpe' && evidence.length < 3) { err.textContent = 'Para golpe, adicione provas (links, prints, contatos).'; err.classList.remove('hidden'); return; }
+      const btn = document.getElementById('denuncia-enviar-btn');
+      btn.disabled = true; btn.style.opacity = '.6';
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        const t = getToken();
+        if (t) headers['Authorization'] = 'Bearer ' + t;
+        const res = await fetch('/api/reports', { method: 'POST', headers, body: JSON.stringify({ rpgName: nome, reason: denunciaMotivoSel, description, evidence: evidence || undefined }) });
+        const data = await res.json();
+        if (!res.ok) { err.textContent = data.error || 'Erro ao enviar.'; err.classList.remove('hidden'); return; }
+        ok.textContent = 'Denúncia enviada. Obrigado, o admin vai analisar.';
+        ok.classList.remove('hidden');
+        document.getElementById('denuncia-desc').value = '';
+        document.getElementById('denuncia-prova').value = '';
+        setTimeout(fecharModalDenuncia, 1600);
+      } catch { err.textContent = 'Erro de conexão.'; err.classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.style.opacity = '1'; }
+    }
+
+    function abrirModalDenuncias() {
+      document.getElementById('modal-denuncias').classList.remove('modal-hidden');
+      renderDenunciasAdmin();
+    }
+
+    function fecharModalDenuncias() {
+      document.getElementById('modal-denuncias').classList.add('modal-hidden');
+    }
+
+    async function renderDenunciasAdmin() {
+      const list = document.getElementById('denuncias-list');
+      ['pending', 'all', 'actioned', 'dismissed'].forEach(f => {
+        const el = document.getElementById('den-f-' + f);
+        if (!el) return;
+        const on = denunciasFiltro === f;
+        el.style.background = on ? '#ef4444' : 'var(--bg-input)';
+        el.style.color = on ? '#fff' : 'var(--text-muted)';
+      });
+      list.innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>';
+      try {
+        const res = await fetch('/api/reports?status=' + encodeURIComponent(denunciasFiltro), { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        if (!res.ok) { list.innerHTML = '<p class="text-xs text-center py-6" style="color:var(--text-muted);">Sem permissão.</p>'; return; }
+        denunciasCache = await res.json();
+        if (!denunciasCache.length) { list.innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Nenhuma denúncia aqui.</p>'; return; }
+        const reasonLabel = { golpe: 'Golpe', inativo: 'Inativo', falso: 'Falso' };
+        const reasonColor = { golpe: '#ef4444', inativo: '#f59e0b', falso: 'var(--accent)' };
+        list.innerHTML = denunciasCache.map(d => {
+          const st = d.status === 'pending' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;">Pendente</span>'
+            : d.status === 'actioned' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;">Resolvida</span>'
+            : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);">Ignorada</span>';
+          const when = new Date(d.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+          return `
+          <div class="rounded-2xl p-3 border space-y-2" style="background:var(--bg-elevated);border-color:var(--border);">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:${reasonColor[d.reason]}20;color:${reasonColor[d.reason]};border:1px solid ${reasonColor[d.reason]}40;">${reasonLabel[d.reason] || d.reason}</span>
+              ${st}
+              <span class="text-[11px] font-bold flex-1 truncate" style="color:var(--text-primary);">${d.rpgName.replace(/</g, '&lt;')}</span>
+              <span class="text-[9px]" style="color:var(--text-muted);">${when}${d.reporter ? ' · @' + d.reporter.replace(/</g, '&lt;') : ''}</span>
+            </div>
+            <p class="text-[11px] leading-relaxed" style="color:var(--text-secondary);">${d.description.replace(/</g, '&lt;')}</p>
+            ${d.evidence ? `<p class="text-[10px] rounded-xl p-2 break-words" style="background:color-mix(in srgb, #ef4444 8%, transparent);border:1px solid color-mix(in srgb, #ef4444 25%, transparent);color:var(--text-secondary);"><b>Provas:</b> ${d.evidence.replace(/</g, '&lt;')}</p>` : ''}
+            ${d.adminNote ? `<p class="text-[10px]" style="color:var(--text-muted);"><b>Nota do admin:</b> ${d.adminNote.replace(/</g, '&lt;')}</p>` : ''}
+            ${d.status === 'pending' ? `
+            <div class="flex gap-2">
+              <input id="note-${d.id}" placeholder="Nota interna (opcional)" class="flex-1 rounded-xl px-2.5 py-2 text-[10px] focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);">
+              <button onclick="resolverDenuncia('${d.id}', 'dismiss')" class="px-3 py-2 rounded-xl text-[10px] font-bold" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);">Ignorar</button>
+              <button onclick="resolverDenuncia('${d.id}', 'resolve')" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white" style="background:#22c55e;">Resolvida</button>
+              <button onclick="abrirDetalheRpg('${d.rpgName.replace(/'/g, "\\'")}')" class="px-3 py-2 rounded-xl text-[10px] font-bold" style="background:var(--accent);color:#fff;">Ver RPG</button>
+            </div>` : ''}
+          </div>`;
+        }).join('');
+      } catch { list.innerHTML = '<p class="text-xs text-center py-6" style="color:var(--text-muted);">Erro ao carregar.</p>'; }
+    }
+
+    async function resolverDenuncia(id, action) {
+      const note = document.getElementById('note-' + id)?.value || '';
+      try {
+        const res = await fetch('/api/reports/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+          body: JSON.stringify({ action, adminNote: note || undefined }),
+        });
+        if (!res.ok) { alert('Erro ao atualizar.'); return; }
+        denunciasCache = denunciasCache.filter(d => d.id !== id);
+        renderDenunciasAdmin();
+        atualizarReportsBadge();
+      } catch { alert('Erro de conexão.'); }
+    }
+
+    async function atualizarReportsBadge() {
+      const badge = document.getElementById('reports-count-badge');
+      if (!badge) return;
+      try {
+        const res = await fetch('/api/reports/pending-count', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.pending > 0) { badge.textContent = data.pending > 99 ? '99+' : String(data.pending); badge.classList.remove('hidden'); }
+        else badge.classList.add('hidden');
+      } catch {}
     }
 
     // ── CRIADORES (ADMIN) ──
@@ -2871,6 +3218,7 @@ const seoCount = seoRevs.length;
         }
         const badge = document.getElementById('pending-count-badge');
         if (badge) badge.textContent = pendingReviewsData.length || '';
+        if (user.role === 'admin') atualizarReportsBadge();
         document.querySelectorAll('.review-delete-btn').forEach(btn => {
           const owner = btn.getAttribute('data-owner');
           btn.classList.toggle('hidden', !(user && (user.role === 'admin' || user.username === owner)));
@@ -3260,78 +3608,159 @@ const seoCount = seoRevs.length;
       } catch {}
     }
 
+    let painelStatsCache = null;
+    let painelFiltro = 'todos';
+
+    function painelTab(f) {
+      painelFiltro = f;
+      ['todos', 'destaque', 'atencao'].forEach(t => {
+        const el = document.getElementById('painel-tab-' + t);
+        if (!el) return;
+        const on = t === f;
+        el.style.background = on ? 'var(--accent)' : 'transparent';
+        el.style.color = on ? '#fff' : 'var(--text-muted)';
+      });
+      painelFiltrar();
+    }
+
+    function painelFiltrar() {
+      if (!painelStatsCache) return;
+      const q = (document.getElementById('painel-busca')?.value || '').toLowerCase();
+      const { cor } = escalaNivel(painelStatsCache.score);
+      let list = painelStatsCache.rpgs;
+      if (painelFiltro === 'destaque') list = list.filter(r => r.boostedPosts > 0 || r.score >= 60);
+      if (painelFiltro === 'atencao') list = list.filter(r => r.reviewCount === 0 || r.avgRating < 3.5 || r.views < 10);
+      if (q) list = list.filter(r => r.rpg.name.toLowerCase().includes(q) || (r.rpg.genre || '').toLowerCase().includes(q));
+      document.getElementById('painel-count').textContent = list.length + ' sistema(s)';
+      const container = document.getElementById('painel-rpgs');
+      if (!list.length) {
+        container.innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Nenhum sistema com esse filtro. Tente outra busca.</p>';
+        return;
+      }
+      container.innerHTML = list.map(r => {
+        const pct = Math.min(100, Math.round((r.score / 100) * 100));
+        const stars = r.reviewCount > 0
+          ? '<i class="fas fa-star" style="color:var(--star);font-size:8px;"></i>'.repeat(Math.floor(r.avgRating)) + (r.avgRating % 1 !== 0 ? '<i class="fas fa-star-half-alt" style="color:var(--star);font-size:8px;"></i>' : '')
+          : '<i class="fa-regular fa-star" style="color:var(--text-muted);font-size:8px;"></i>';
+        const statusChip = r.reviewCount === 0
+          ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;">Sem avaliações ainda</span>'
+          : r.avgRating < 3.5
+          ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#ef444420;color:#ef4444;border:1px solid #ef444440;">Precisa de atenção</span>'
+          : r.boostedPosts > 0
+          ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;">Em alta no feed</span>'
+          : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);">Estável</span>';
+        const boostBar = Math.min(100, r.boostedPosts ? (r.boostedPosts * 40) : 0);
+        return `
+        <div class="rounded-2xl border overflow-hidden" style="background: color-mix(in srgb, var(--bg-elevated) 40%, transparent); border-color: var(--border);">
+          <div class="flex items-stretch gap-0">
+            <img src="${r.rpg.image}" class="w-20 h-auto object-cover shrink-0" alt="" style="min-height:110px;">
+            <div class="flex-1 min-w-0 p-3.5 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <h4 class="text-xs font-bold truncate" style="color: var(--text-primary);">${r.rpg.name}</h4>
+                  <p class="text-[10px] truncate" style="color:var(--text-muted);">${r.rpg.genre || ''} · ${r.rpg.owner || ''}</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-1 rounded-xl shrink-0" style="background:${cor}20;color:${cor};border:1px solid ${cor}40;">${r.score}</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <div class="flex items-center gap-0.5">${stars}</div>
+                <span class="text-[9px]" style="color: var(--text-muted);">${r.reviewCount > 0 ? r.avgRating.toFixed(1) + ' · ' + r.reviewCount + ' avaliações' : 'Sem notas'}</span>
+                ${statusChip}
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-input);" title="Score ${r.score}/100">
+                <div class="h-full rounded-full" style="width:${pct}%; background: linear-gradient(90deg, ${cor}, #f59e0b);"></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 px-3.5 pb-2 text-center">
+            <div class="rounded-xl py-2" style="background: var(--bg-input);">
+              <p class="text-sm font-bold" style="color: var(--text-primary);">${r.views.toLocaleString('pt-BR')}</p>
+              <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Acessos</p>
+            </div>
+            <div class="rounded-xl py-2" style="background: var(--bg-input);">
+              <p class="text-sm font-bold" style="color: var(--text-primary);">${r.reviewCount}</p>
+              <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Avaliações</p>
+            </div>
+            <div class="rounded-xl py-2" style="background: var(--bg-input);">
+              <p class="text-sm font-bold" style="color: var(--text-primary);">${r.repliesCount}</p>
+              <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Respostas</p>
+            </div>
+            <div class="rounded-xl py-2" style="background: var(--bg-input);">
+              <p class="text-sm font-bold" style="color: var(--text-primary);">${r.postsCount}</p>
+              <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Posts</p>
+            </div>
+          </div>
+          <div class="px-3.5 pb-2">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[9px] font-bold" style="color: var(--text-muted);">Posts impulsionados</span>
+              <span class="text-[9px] font-bold" style="color: ${r.boostedPosts ? '#f59e0b' : 'var(--text-muted)'};">${r.boostedPosts} em alta</span>
+            </div>
+            <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-input);">
+              <div class="h-full rounded-full transition-all" style="width:${boostBar}%; background: linear-gradient(90deg, ${cor}, #f59e0b);"></div>
+            </div>
+          </div>
+          <div class="flex gap-2 px-3.5 pb-3.5">
+            <button onclick="abrirDetalheRpg('${r.rpg.name.replace(/'/g, "\\'")}')" class="flex-1 py-2 rounded-xl text-[10px] font-bold transition active:scale-[0.97]" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);"><i class="fa-solid fa-eye mr-1"></i>Ver página</button>
+            <button onclick="fecharPainelCriador();setTimeout(()=>abrirModalPostarEvento('${r.rpg.name.replace(/'/g, "\\'")}'),150)" class="flex-1 py-2 rounded-xl text-[10px] font-bold transition active:scale-[0.97] text-white" style="background:var(--accent);"><i class="fa-solid fa-bullhorn mr-1"></i>Postar evento</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
     function abrirPainelCriador() {
       const user = getUser();
       if (!user) return;
       const modal = document.getElementById('modal-painel-criador');
       modal.classList.remove('modal-hidden');
+      document.getElementById('painel-username-badge').textContent = '@' + user.username;
       document.getElementById('painel-rpgs').innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>';
       document.getElementById('painel-score-valor').textContent = '0';
+      document.getElementById('painel-score-bar').style.width = '0%';
       document.getElementById('painel-nivel').textContent = 'Calculando...';
+      document.getElementById('painel-total-views').textContent = '—';
+      document.getElementById('painel-total-reviews').textContent = '—';
+      document.getElementById('painel-media-geral').textContent = '—';
+      const busca = document.getElementById('painel-busca');
+      if (busca) busca.value = '';
+      painelTab('todos');
 
       fetch('/api/creators/' + encodeURIComponent(user.username) + '/stats', { headers: { 'Authorization': 'Bearer ' + getToken() } })
         .then(r => { if (r.status === 403) { fecharPainelCriador(); return null; } return r.json(); })
         .then(stats => {
           if (!stats) return;
+          painelStatsCache = stats;
           document.getElementById('painel-score-valor').textContent = stats.score;
+          document.getElementById('painel-score-bar').style.width = Math.min(100, stats.score) + '%';
           const { nivel, cor } = escalaNivel(stats.score);
           const nivelEl = document.getElementById('painel-nivel');
           nivelEl.textContent = 'Nível: ' + nivel + ' · Score ' + stats.score + '/100';
           const scoreCard = document.getElementById('painel-score-card');
           scoreCard.style.background = 'linear-gradient(135deg, ' + cor + ', color-mix(in srgb, ' + cor + ' 60%, #000))';
 
-          const container = document.getElementById('painel-rpgs');
+          const totalViews = stats.rpgs.reduce((a, r) => a + (r.views || 0), 0);
+          const totalReviews = stats.rpgs.reduce((a, r) => a + (r.reviewCount || 0), 0);
+          const mediaGeral = totalReviews ? (stats.rpgs.reduce((a, r) => a + (r.avgRating * r.reviewCount), 0) / totalReviews) : 0;
+          document.getElementById('painel-total-views').textContent = totalViews.toLocaleString('pt-BR');
+          document.getElementById('painel-total-reviews').textContent = String(totalReviews);
+          document.getElementById('painel-media-geral').textContent = totalReviews ? mediaGeral.toFixed(1) : '—';
+
+          const dica = document.getElementById('painel-dica');
           if (!stats.rpgs.length) {
-            container.innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Nenhum sistema vinculado ao seu selo de criador.</p>';
+            dica.innerHTML = 'Você ainda não tem sistemas vinculados. Peça ao admin o selo de criador.';
+          } else if (stats.rpgs.some(r => r.reviewCount === 0)) {
+            dica.innerHTML = '<i class="fa-solid fa-lightbulb mr-1"></i><b>Dica:</b> sistemas sem avaliação quase não aparecem. Compartilhe o link e peça as primeiras críticas.';
+          } else if (stats.rpgs.some(r => r.avgRating < 3.5 && r.reviewCount > 0)) {
+            dica.innerHTML = '<i class="fa-solid fa-lightbulb mr-1"></i><b>Dica:</b> responda as críticas com nota baixa — criadores que respondem sobem mais rápido.';
+          } else {
+            dica.innerHTML = '<i class="fa-solid fa-fire mr-1"></i><b>Boa!</b> Seus sistemas estão bem. Publique eventos para manter o impulso no feed.';
+          }
+
+          if (!stats.rpgs.length) {
+            document.getElementById('painel-rpgs').innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Nenhum sistema vinculado ao seu selo de criador.</p>';
+            document.getElementById('painel-count').textContent = '';
             return;
           }
-          container.innerHTML = stats.rpgs.map(r => {
-            const stars = r.reviewCount > 0
-              ? '<i class="fas fa-star" style="color:var(--star);font-size:8px;"></i>'.repeat(Math.floor(r.avgRating)) + (r.avgRating % 1 !== 0 ? '<i class="fas fa-star-half-alt" style="color:var(--star);font-size:8px;"></i>' : '')
-              : '<i class="fa-regular fa-star" style="color:var(--text-muted);font-size:8px;"></i>';
-            const boostBar = Math.min(100, r.boostedPosts ? (r.boostedPosts * 40) : 0);
-            return `
-            <div class="rounded-2xl p-3.5 border space-y-3" style="background: color-mix(in srgb, var(--bg-elevated) 40%, transparent); border-color: var(--border);">
-              <div class="flex items-center gap-3">
-                <img src="${r.rpg.image}" class="w-11 h-13 object-cover rounded-lg" alt="">
-                <div class="flex-1 min-w-0">
-                  <h4 class="text-xs font-bold truncate" style="color: var(--text-primary);">${r.rpg.name}</h4>
-                  <div class="flex items-center gap-1.5 mt-0.5">
-                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:${cor}20;color:${cor};border:1px solid ${cor}40;">Score ${r.score}</span>
-                    <div class="flex items-center gap-0.5">${stars}</div>
-                    <span class="text-[9px]" style="color: var(--text-muted);">${r.reviewCount > 0 ? r.avgRating.toFixed(1) : 'Sem notas'}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="grid grid-cols-4 gap-2 text-center">
-                <div class="rounded-xl py-2" style="background: var(--bg-input);">
-                  <p class="text-sm font-bold" style="color: var(--text-primary);">${r.views.toLocaleString('pt-BR')}</p>
-                  <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Acessos</p>
-                </div>
-                <div class="rounded-xl py-2" style="background: var(--bg-input);">
-                  <p class="text-sm font-bold" style="color: var(--text-primary);">${r.reviewCount}</p>
-                  <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Avaliações</p>
-                </div>
-                <div class="rounded-xl py-2" style="background: var(--bg-input);">
-                  <p class="text-sm font-bold" style="color: var(--text-primary);">${r.repliesCount}</p>
-                  <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Respostas</p>
-                </div>
-                <div class="rounded-xl py-2" style="background: var(--bg-input);">
-                  <p class="text-sm font-bold" style="color: var(--text-primary);">${r.postsCount}</p>
-                  <p class="text-[8px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Posts</p>
-                </div>
-              </div>
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] font-bold" style="color: var(--text-muted);">Posts impulsionados</span>
-                  <span class="text-[9px] font-bold" style="color: ${r.boostedPosts ? '#f59e0b' : 'var(--text-muted)'};">${r.boostedPosts} em alta</span>
-                </div>
-                <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-input);">
-                  <div class="h-full rounded-full transition-all" style="width:${boostBar}%; background: linear-gradient(90deg, ${cor}, #f59e0b);"></div>
-                </div>
-              </div>
-            </div>`;
-          }).join('');
+          painelFiltrar();
         })
         .catch(() => {
           document.getElementById('painel-rpgs').innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Erro ao carregar o painel.</p>';
@@ -3358,10 +3787,22 @@ const seoCount = seoRevs.length;
       searchTrackTimer = setTimeout(() => trackAnalytics({ type: 'search', query: q }), 800);
     }
 
-    function abrirMonitoramento() {
+    let monTipo = 'all';
+    let monCache = null;
+
+    function abrirMonitoramento(keep) {
       const token = getToken();
       if (!token) return;
       document.getElementById('modal-monitoramento').classList.remove('modal-hidden');
+      ['all', 'rpg', 'search'].forEach(t => {
+        const id = t === 'all' ? 'mon-f-all' : t === 'rpg' ? 'mon-f-rpg' : 'mon-f-search';
+        const el = document.getElementById(id);
+        if (!el) return;
+        const on = (monTipo === 'all' && t === 'all') || (monTipo === 'rpgview' && t === 'rpg') || (monTipo === 'search' && t === 'search');
+        el.style.background = on ? 'var(--accent)' : 'var(--bg-input)';
+        el.style.color = on ? '#fff' : 'var(--text-muted)';
+      });
+      if (keep && monCache) { renderMonitoramento(monCache); return; }
       document.getElementById('mon-total-visits').textContent = '...';
       document.getElementById('mon-total-rpgviews').textContent = '...';
       document.getElementById('mon-total-searches').textContent = '...';
@@ -3373,50 +3814,86 @@ const seoCount = seoRevs.length;
         .then(r => { if (r.status === 403) { fecharMonitoramento(); return null; } return r.json(); })
         .then(data => {
           if (!data) return;
-          document.getElementById('mon-total-visits').textContent = data.totalVisits.toLocaleString('pt-BR');
-          document.getElementById('mon-total-rpgviews').textContent = data.totalRpgViews.toLocaleString('pt-BR');
-          document.getElementById('mon-total-searches').textContent = data.totalSearches.toLocaleString('pt-BR');
-
-          const max = Math.max(...data.daily.map(d => d.count), 1);
-          const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-          document.getElementById('mon-daily').innerHTML = data.daily.map(d => {
-            const h = Math.min(Math.max(Math.round((d.count / max) * 100), d.count ? 4 : 2), 78);
-            const dt = new Date(d.day + 'T00:00:00');
-            return `
-            <div class="flex-1 flex flex-col items-center justify-end gap-1 h-full min-w-0">
-              <span class="text-[8px] font-bold" style="color:${d.count ? 'var(--text-secondary)' : 'var(--text-muted)'};">${d.count || ''}</span>
-              <div class="w-full rounded-t" style="height:${h}%; background:${d.count ? 'var(--accent)' : 'color-mix(in srgb, var(--border) 60%, transparent)'};" title="${d.day}"></div>
-              <span class="text-[7px]" style="color:var(--text-muted);">${days[dt.getDay()]}</span>
-            </div>`;
-          }).join('');
-
-          const topR = data.topRpgs.slice(0, 5);
-          const maxR = Math.max(...topR.map(t => t.count), 1);
-          document.getElementById('mon-top-rpgs').innerHTML = topR.length ? topR.map((t, i) => `
-            <div class="rounded-xl p-2.5" style="background: var(--bg-elevated); border: 1px solid var(--border);">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-[11px] font-semibold truncate" style="color:var(--text-primary);"><span class="mr-1" style="color:var(--star);">#${i + 1}</span>${t.rpg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
-                <span class="text-[10px] font-bold shrink-0 ml-2" style="color:#f59e0b;">${t.count} views</span>
-              </div>
-              <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-input);">
-                <div class="h-full rounded-full" style="width:${Math.round(t.count / maxR * 100)}%; background: linear-gradient(90deg, var(--accent), #f59e0b);"></div>
-              </div>
-            </div>`).join('') : '<p class="text-[10px] text-center py-3" style="color:var(--text-muted);">Nenhuma visualização registrada ainda.</p>';
-
-          const topS = data.topSearches.slice(0, 5);
-          const maxS = Math.max(...topS.map(t => t.count), 1);
-          document.getElementById('mon-top-searches').innerHTML = topS.length ? topS.map((t, i) => `
-            <div class="flex items-center justify-between rounded-xl p-2.5" style="background: var(--bg-elevated); border: 1px solid var(--border);">
-              <span class="text-[11px] font-medium truncate" style="color:var(--text-secondary);"><i class="fa-solid fa-magnifying-glass text-[9px] mr-1.5" style="color:var(--text-muted);"></i>${t.query.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
-              <div class="flex items-center gap-2 shrink-0 ml-2">
-                <div class="h-1.5 w-20 rounded-full overflow-hidden" style="background: var(--bg-input);">
-                  <div class="h-full rounded-full" style="width:${Math.round(t.count / maxS * 100)}%; background: var(--accent);"></div>
-                </div>
-                <span class="text-[10px] font-bold" style="color:var(--text-muted);">${t.count}</span>
-              </div>
-            </div>`).join('') : '<p class="text-[10px] text-center py-3" style="color:var(--text-muted);">Nenhuma busca registrada ainda.</p>';
+          monCache = data;
+          renderMonitoramento(data);
         })
         .catch(() => { fecharMonitoramento(); });
+    }
+
+    function renderMonitoramento(data) {
+      document.getElementById('mon-total-visits').textContent = data.totalVisits.toLocaleString('pt-BR');
+      document.getElementById('mon-total-rpgviews').textContent = data.totalRpgViews.toLocaleString('pt-BR');
+      document.getElementById('mon-total-searches').textContent = data.totalSearches.toLocaleString('pt-BR');
+      document.getElementById('mon-last7-visits').textContent = '+' + (data.last7?.visits ?? 0) + ' nos últimos 7 dias';
+      document.getElementById('mon-last7-rpgviews').textContent = '+' + (data.last7?.rpgViews ?? 0) + ' nos últimos 7 dias';
+      document.getElementById('mon-last7-searches').textContent = '+' + (data.last7?.searches ?? 0) + ' nos últimos 7 dias';
+      document.getElementById('mon-avg').textContent = (data.avgPerDay ?? 0) + '/dia';
+      document.getElementById('mon-peak').textContent = data.peakDay ? data.peakDay.day.slice(8, 10) + '/' + data.peakDay.day.slice(5, 7) + ' (' + data.peakDay.count + ')' : '—';
+      const ins = document.getElementById('mon-insights');
+      const conv = data.totalVisits ? Math.round((data.totalRpgViews / data.totalVisits) * 100) : 0;
+      ins.innerHTML = '<i class="fa-solid fa-lightbulb mr-1"></i><b>Resumo:</b> ' + conv + '% das visitas viram um RPG · '
+        + 'média de ' + (data.avgPerDay ?? 0) + ' eventos/dia · '
+        + (data.peakDay ? 'pico em <b>' + data.peakDay.day + '</b> com <b>' + data.peakDay.count + '</b> eventos.' : 'sem pico ainda.');
+
+      const valOf = (d) => monTipo === 'rpgview' ? (d.rpgview || 0) : monTipo === 'search' ? (d.search || 0) : (d.count || 0);
+      const max = Math.max(...data.daily.map(valOf), 1);
+      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      document.getElementById('mon-daily').innerHTML = data.daily.map(d => {
+        const v = valOf(d);
+        const h = Math.min(Math.max(Math.round((v / max) * 100), v ? 4 : 2), 72);
+        const dt = new Date(d.day + 'T00:00:00');
+        return `
+        <div class="flex-1 flex flex-col items-center justify-end gap-1 h-full min-w-0">
+          <span class="text-[8px] font-bold" style="color:${v ? 'var(--text-secondary)' : 'var(--text-muted)'};">${v || ''}</span>
+          <div class="w-full rounded-t" style="height:${h}%; background:${v ? 'var(--accent)' : 'color-mix(in srgb, var(--border) 60%, transparent)'};" title="${d.day}: ${d.count} total · ${d.pageview || 0} visitas · ${d.rpgview || 0} RPG · ${d.search || 0} buscas"></div>
+          <span class="text-[7px]" style="color:var(--text-muted);">${days[dt.getDay()]}</span>
+          <span class="text-[6px]" style="color:var(--text-muted);opacity:.7;">${d.day.slice(8, 10)}/${d.day.slice(5, 7)}</span>
+        </div>`;
+      }).join('');
+
+      const byRpgMap = {};
+      (data.byRpg || []).forEach(b => { byRpgMap[b.rpg] = b; });
+      const topR = data.topRpgs.slice(0, 8);
+      const maxR = Math.max(...topR.map(t => t.count), 1);
+      document.getElementById('mon-top-rpgs').innerHTML = topR.length ? topR.map((t, i) => {
+        const b = byRpgMap[t.rpg];
+        const extra = b ? `<span class="text-[9px] ml-2" style="color:var(--text-muted);">${b.reviews} avaliações${b.avgRating ? ' · ★ ' + b.avgRating.toFixed(1) : ''}</span>` : '';
+        return `
+        <div class="rounded-xl p-2.5" style="background: var(--bg-elevated); border: 1px solid var(--border);">
+          <div class="flex items-center justify-between mb-1 gap-2">
+            <span class="text-[11px] font-semibold truncate" style="color:var(--text-primary);"><span class="mr-1" style="color:var(--star);">#${i + 1}</span>${t.rpg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}${extra}</span>
+            <span class="text-[10px] font-bold shrink-0 ml-2" style="color:#f59e0b;">${t.count} views</span>
+          </div>
+          <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-input);">
+            <div class="h-full rounded-full" style="width:${Math.round(t.count / maxR * 100)}%; background: linear-gradient(90deg, var(--accent), #f59e0b);"></div>
+          </div>
+        </div>`;
+      }).join('') : '<p class="text-[10px] text-center py-3" style="color:var(--text-muted);">Nenhuma visualização registrada ainda.</p>';
+
+      const topS = data.topSearches.slice(0, 8);
+      const maxS = Math.max(...topS.map(t => t.count), 1);
+      document.getElementById('mon-top-searches').innerHTML = topS.length ? topS.map((t, i) => `
+        <div class="flex items-center justify-between rounded-xl p-2.5" style="background: var(--bg-elevated); border: 1px solid var(--border);">
+          <span class="text-[11px] font-medium truncate" style="color:var(--text-secondary);"><i class="fa-solid fa-magnifying-glass text-[9px] mr-1.5" style="color:var(--text-muted);"></i>${t.query.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+          <div class="flex items-center gap-2 shrink-0 ml-2">
+            <div class="h-1.5 w-20 rounded-full overflow-hidden" style="background: var(--bg-input);">
+              <div class="h-full rounded-full" style="width:${Math.round(t.count / maxS * 100)}%; background: var(--accent);"></div>
+            </div>
+            <span class="text-[10px] font-bold" style="color:var(--text-muted);">${t.count}</span>
+          </div>
+        </div>`).join('') : '<p class="text-[10px] text-center py-3" style="color:var(--text-muted);">Nenhuma busca registrada ainda.</p>';
+
+      const rec = data.recent || [];
+      document.getElementById('mon-recent').innerHTML = rec.length ? rec.slice(0, 12).map(r => {
+        const icon = r.type === 'rpgview' ? 'fa-eye' : r.type === 'search' ? 'fa-magnifying-glass' : 'fa-house';
+        const label = r.type === 'rpgview' ? ('RPG: ' + (r.rpg || '')) : r.type === 'search' ? ('Busca: "' + (r.query || '') + '"') : 'Visita à home';
+        const when = new Date(r.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        return `<div class="flex items-center gap-2 rounded-xl px-2.5 py-2" style="background:var(--bg-elevated);border:1px solid var(--border);">
+          <i class="fa-solid ${icon} text-[9px]" style="color:var(--text-muted);"></i>
+          <span class="text-[10px] truncate flex-1" style="color:var(--text-secondary);">${label.replace(/</g, '&lt;')}</span>
+          <span class="text-[9px] shrink-0" style="color:var(--text-muted);">${when}</span>
+        </div>`;
+      }).join('') : '<p class="text-[10px] text-center py-3" style="color:var(--text-muted);">Sem atividade recente.</p>';
     }
 
     function fecharMonitoramento() {
@@ -3640,7 +4117,7 @@ const seoCount = seoRevs.length;
     }
 
     // ── POSTAR EVENTO ──
-    function abrirModalPostarEvento() {
+    function abrirModalPostarEvento(preRpg) {
       const user = getUser();
       if (!user) { abrirModalLogin(); return; }
       const u = catUsersData.find(x => x.username === user.username);
@@ -3648,6 +4125,7 @@ const seoCount = seoRevs.length;
       if (!meusRpgs.length) { alert('Você não é criador de nenhum sistema.'); return; }
       const select = document.getElementById('event-rpg-select');
       select.innerHTML = meusRpgs.map(rn => `<option value="${rn.replace(/"/g, '&quot;')}">${rn}</option>`).join('');
+      if (preRpg && meusRpgs.includes(preRpg)) select.value = preRpg;
       document.getElementById('event-title').value = '';
       document.getElementById('event-content').value = '';
       document.getElementById('event-error').classList.add('hidden');
@@ -3750,7 +4228,7 @@ const seoCount = seoRevs.length;
     function renderFeedDestaques() {
       const section = document.getElementById('feed-destaques-section');
       if (!section) return;
-      const feats = catRpgData.filter(r => r.featured);
+      const feats = catRpgData.filter(r => r.featured).sort((a, b) => ((a.featuredOrder ?? 0) - (b.featuredOrder ?? 0)) || a.name.localeCompare(b.name));
       if (!feats.length) { section.style.display = 'none'; return; }
       section.style.display = '';
       const container = section.querySelector('.no-scrollbar');
@@ -4053,6 +4531,8 @@ const seoCount = seoRevs.length;
         if (!document.getElementById('modal-pendentes').classList.contains('modal-hidden')) fecharModalPendentes();
         if (!document.getElementById('modal-painel-criador').classList.contains('modal-hidden')) fecharPainelCriador();
         if (!document.getElementById('modal-monitoramento').classList.contains('modal-hidden')) fecharMonitoramento();
+        if (!document.getElementById('modal-denuncia').classList.contains('modal-hidden')) fecharModalDenuncia();
+        if (!document.getElementById('modal-denuncias').classList.contains('modal-hidden')) fecharModalDenuncias();
       }
     });
 
