@@ -829,6 +829,11 @@ const seoCount = seoRevs.length;
                 Denúncias
                 <span id="reports-count-badge" class="hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full items-center justify-center text-[8px] font-bold flex" style="background: #ef4444; color: white;">0</span>
               </button>
+              <button onclick="abrirModalSubmissoes()" class="py-2.5 px-3 rounded-xl text-[11px] font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-2 relative" style="background: color-mix(in srgb, #a855f7 15%, transparent); color: #c084fc; border: 1px solid color-mix(in srgb, #a855f7 35%, transparent);">
+                <i class="fa-solid fa-inbox"></i>
+                Novos RPGs
+                <span id="submissions-count-badge" class="hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full items-center justify-center text-[8px] font-bold flex" style="background: #a855f7; color: white;">0</span>
+              </button>
             </div>
           </div>
 
@@ -842,6 +847,15 @@ const seoCount = seoRevs.length;
               <button onclick="ordenarCatalogo('popular')" id="sort-popular" class="px-3 py-2.5 rounded-xl text-[10px] font-bold transition-all shrink-0" style="background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border);">Populares</button>
               <button onclick="ordenarCatalogo('nota')" id="sort-nota" class="px-3 py-2.5 rounded-xl text-[10px] font-bold transition-all shrink-0" style="background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border);">Melhor Nota</button>
             </div>
+          </div>
+
+          <!-- CTA SUTIL: CADASTRAR RPG -->
+          <div class="w-full mb-7 flex justify-center">
+            <button onclick="abrirModalSubmeterRpg()" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] transition opacity-60 hover:opacity-100" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);">
+              <i class="fa-regular fa-circle-question text-[10px]"></i>
+              <span>É criador? <span class="underline underline-offset-2">Cadastre seu RPG</span> para avaliação da nossa curadoria</span>
+              <i class="fa-solid fa-chevron-right text-[8px] transition-transform group-hover:translate-x-0.5"></i>
+            </button>
           </div>
 
           <!-- TOP 10 MAIS BEM AVALIADOS -->
@@ -1091,6 +1105,12 @@ const seoCount = seoRevs.length;
               </label>
               <input type="file" id="reg-image" accept=".jpg,.jpeg,.png,.webp" class="hidden" onchange="abrirCropperParaImagem(this, 'reg-image-name')">
             </div>
+            <div id="reg-image-preview-wrap" class="hidden mt-2 flex items-start gap-2">
+              <div class="rounded-xl overflow-hidden border shrink-0" style="border-color:var(--border);width:72px;aspect-ratio:2/3;background:#000;">
+                <img id="reg-image-preview" class="w-full h-full object-cover" alt="Prévia 2:3">
+              </div>
+              <p class="text-[9px]" style="color:var(--text-muted);">Prévia 2:3 — como aparece no catálogo.<br><span id="reg-image-meta"></span></p>
+            </div>
           </div>
           <div><label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Banner (opcional)</label>
             <div class="rounded-xl overflow-hidden border cursor-pointer" style="background: var(--bg-input); border-color: var(--border);">
@@ -1103,7 +1123,13 @@ const seoCount = seoRevs.length;
                   <p id="reg-banner-name" class="text-[10px] truncate mt-0.5" style="color: var(--text-muted);">Nenhum arquivo</p>
                 </div>
               </label>
-              <input type="file" id="reg-banner" accept=".jpg,.jpeg,.png,.webp" class="hidden" onchange="document.getElementById('reg-banner-name').textContent = this.files[0]?.name || 'Nenhum arquivo'">
+              <input type="file" id="reg-banner" accept=".jpg,.jpeg,.png,.webp" class="hidden" onchange="previewBannerSimples(this, 'reg-banner-name', 'reg-banner-preview-wrap', 'reg-banner-preview', 'reg-banner-meta')">
+            </div>
+            <div id="reg-banner-preview-wrap" class="hidden mt-2">
+              <div class="rounded-xl overflow-hidden border w-full" style="border-color:var(--border);aspect-ratio:16/9;background:#000;">
+                <img id="reg-banner-preview" class="w-full h-full object-cover" alt="Prévia 16:9">
+              </div>
+              <p class="text-[9px] mt-1" style="color:var(--text-muted);">Prévia 16:9 — como aparece no topo. <span id="reg-banner-meta"></span></p>
             </div>
           </div>
           <div><label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Site Oficial (link)</label><input type="url" id="reg-link" class="w-full rounded-xl p-2.5 text-xs focus:outline-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="https://..."></div>
@@ -1357,10 +1383,16 @@ const seoCount = seoRevs.length;
             <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);" id="denuncia-desc-label">Descreva *</label>
             <textarea id="denuncia-desc" rows="3" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none resize-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Conte o que aconteceu..."></textarea>
           </div>
-          <div id="denuncia-prova-box" class="hidden">
-            <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Provas (links, prints hospedados, contatos) *</label>
-            <textarea id="denuncia-prova" rows="2" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none resize-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Cole links de prints, conversas, chaves pix cobradas, etc."></textarea>
-            <p class="text-[9px] mt-1" style="color:var(--text-muted);">Dica: suba prints em um site de imagens e cole o link aqui.</p>
+          <div id="denuncia-prova-box" class="hidden space-y-2">
+            <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Provas * (fotos + links)</label>
+            <textarea id="denuncia-prova" rows="2" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none resize-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Cole links de conversas, chaves pix cobradas, etc."></textarea>
+            <label for="denuncia-files" class="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-[11px] font-bold cursor-pointer transition active:scale-[0.98]" style="background:var(--bg-input);border:1px dashed var(--border);color:var(--text-secondary);">
+              <i class="fa-solid fa-image"></i>
+              <span id="denuncia-files-label">Anexar prints (até 3 imagens)</span>
+            </label>
+            <input id="denuncia-files" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="hidden" onchange="denunciaPreview(this)">
+            <div id="denuncia-preview" class="flex gap-2 flex-wrap"></div>
+            <p class="text-[9px] mt-1" style="color:var(--text-muted);">Igual ao cadastro de RPG: as imagens vão para análise do admin.</p>
           </div>
           <p id="denuncia-error" class="hidden text-[10px] font-bold" style="color: #ef4444;"></p>
           <p id="denuncia-ok" class="hidden text-[10px] font-bold" style="color: #22c55e;"></p>
@@ -1391,6 +1423,134 @@ const seoCount = seoRevs.length;
             <button onclick="denunciasFiltro='dismissed';renderDenunciasAdmin()" id="den-f-dismissed" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Ignoradas</button>
           </div>
           <div id="denuncias-list" class="space-y-2">
+            <p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL CADASTRAR RPG -->
+    <div id="modal-submeter-rpg" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: color-mix(in srgb, var(--bg-primary) 90%, transparent);">
+      <div class="rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+        <div class="p-5 border-b flex justify-between items-center sticky top-0 z-10" style="border-color: var(--border); background: var(--bg-elevated);">
+          <h3 class="text-sm font-bold font-title flex items-center gap-2" style="color: var(--text-primary);">
+            <i class="fa-regular fa-circle-question" style="color:var(--text-muted);"></i>
+            Cadastrar RPG
+          </h3>
+          <button onclick="fecharModalSubmeterRpg()" class="p-2 rounded-xl transition" style="color: var(--text-muted);">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="p-4 space-y-3">
+          <p class="text-[10px] leading-relaxed" style="color:var(--text-muted);">Envie os dados do seu RPG para avaliação da nossa equipe de curadoria. Se aprovado, ele entra no catálogo.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="col-span-2 sm:col-span-1">
+              <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Nome do RPG *</label>
+              <input id="sub-nome" type="text" maxlength="80" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="Ex: Reinos de Névoa">
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Criadora / Editora *</label>
+              <input id="sub-owner" type="text" maxlength="80" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="Ex: Estúdio Lua">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Categoria *</label>
+              <input id="sub-genre" type="text" maxlength="40" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="Ex: Fantasia">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Classificação *</label>
+                <select id="sub-age" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);">
+                  <option value="L">Livre</option>
+                  <option value="10">10</option>
+                  <option value="12">12</option>
+                  <option value="14">14</option>
+                  <option value="16">16</option>
+                  <option value="18">18</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Ano</label>
+                <input id="sub-year" type="text" maxlength="10" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="2026">
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Descrição * (mín. 20 caracteres)</label>
+            <textarea id="sub-desc" rows="4" maxlength="5000" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none resize-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="Sobre o que é? Como se joga? Para quantas pessoas?"></textarea>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Site oficial (opcional)</label>
+              <input id="sub-link" type="url" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="https://...">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">WhatsApp / Convite (opcional)</label>
+              <input id="sub-whatsapp" type="text" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="Link do grupo">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Contato (visível apenas para a curadoria)</label>
+            <input id="sub-contact" type="text" maxlength="200" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" placeholder="WhatsApp ou e-mail para retorno da avaliação">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Capa (2:3) *</label>
+              <label for="sub-image" class="flex flex-col items-center justify-center gap-1 w-full rounded-xl py-3 text-[10px] font-bold cursor-pointer" style="background:var(--bg-input);border:1px dashed var(--border);color:var(--text-secondary);">
+                <i class="fa-solid fa-image"></i><span id="sub-image-label">Escolher capa</span>
+              </label>
+              <input id="sub-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" onchange="subPreview(this,'sub-image-preview','sub-image-label','sub-image-meta','2:3')">
+              <div id="sub-image-preview-wrap" class="hidden mt-2 flex flex-col items-center gap-1">
+                <div class="rounded-xl overflow-hidden border" style="border-color:var(--border);width:110px;aspect-ratio:2/3;background:#000;">
+                  <img id="sub-image-preview" class="w-full h-full object-cover" alt="Prévia da capa 2:3">
+                </div>
+                <p id="sub-image-meta" class="text-[9px] text-center" style="color:var(--text-muted);"></p>
+                <p class="text-[8px]" style="color:var(--text-muted);opacity:.7;">Prévia no formato do catálogo (2:3)</p>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold mb-1" style="color:var(--text-secondary);">Banner (16:9, opcional)</label>
+              <label for="sub-banner" class="flex flex-col items-center justify-center gap-1 w-full rounded-xl py-3 text-[10px] font-bold cursor-pointer" style="background:var(--bg-input);border:1px dashed var(--border);color:var(--text-secondary);">
+                <i class="fa-solid fa-panorama"></i><span id="sub-banner-label">Escolher banner</span>
+              </label>
+              <input id="sub-banner" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" onchange="subPreview(this,'sub-banner-preview','sub-banner-label','sub-banner-meta','16:9')">
+              <div id="sub-banner-preview-wrap" class="hidden mt-2 flex flex-col items-center gap-1">
+                <div class="rounded-xl overflow-hidden border w-full" style="border-color:var(--border);aspect-ratio:16/9;background:#000;">
+                  <img id="sub-banner-preview" class="w-full h-full object-cover" alt="Prévia do banner 16:9">
+                </div>
+                <p id="sub-banner-meta" class="text-[9px] text-center" style="color:var(--text-muted);"></p>
+                <p class="text-[8px]" style="color:var(--text-muted);opacity:.7;">Prévia no formato do topo (16:9)</p>
+              </div>
+            </div>
+          </div>
+          <p id="sub-error" class="hidden text-[10px] font-bold" style="color:#ef4444;"></p>
+          <p id="sub-ok" class="hidden text-[10px] font-bold" style="color:#22c55e;"></p>
+          <button onclick="enviarSubmissao()" id="sub-enviar-btn" class="w-full text-white font-bold py-2.5 rounded-xl text-xs transition-all active:scale-[0.97]" style="background: linear-gradient(135deg, var(--accent), #a855f7);">
+            <i class="fa-solid fa-paper-plane"></i> Enviar para avaliação
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL AVALIAR SUBMISSÕES (ADMIN) -->
+    <div id="modal-submissoes" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: color-mix(in srgb, var(--bg-primary) 90%, transparent);">
+      <div class="rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+        <div class="p-5 border-b flex justify-between items-center sticky top-0 z-10" style="border-color: var(--border); background: var(--bg-elevated);">
+          <h3 class="text-sm font-bold font-title flex items-center gap-2" style="color: var(--text-primary);">
+            <i class="fa-solid fa-inbox" style="color:#c084fc;"></i>
+            RPGs enviados para análise
+          </h3>
+          <button onclick="fecharModalSubmissoes()" class="p-2 rounded-xl transition" style="color: var(--text-muted);">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="submissoesFiltro='pending';renderSubmissoesAdmin()" id="sub-f-pending" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Pendentes</button>
+            <button onclick="submissoesFiltro='all';renderSubmissoesAdmin()" id="sub-f-all" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Todas</button>
+            <button onclick="submissoesFiltro='approved';renderSubmissoesAdmin()" id="sub-f-approved" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Aprovadas</button>
+            <button onclick="submissoesFiltro='rejected';renderSubmissoesAdmin()" id="sub-f-rejected" class="px-3 py-1.5 rounded-xl text-[10px] font-bold">Recusadas</button>
+          </div>
+          <div id="submissoes-list" class="space-y-2">
             <p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>
           </div>
         </div>
@@ -1775,13 +1935,41 @@ const seoCount = seoRevs.length;
         fecharCropper();
       }, 'image/png');
     }
+    function previewBannerSimples(input, labelId, wrapId, imgId, metaId) {
+      const file = input.files?.[0];
+      document.getElementById(labelId).textContent = file?.name || 'Nenhum arquivo';
+      const wrap = document.getElementById(wrapId);
+      if (!file) { wrap?.classList.add('hidden'); return; }
+      const url = URL.createObjectURL(file);
+      const img = document.getElementById(imgId);
+      img.src = url;
+      wrap?.classList.remove('hidden');
+      const probe = new Image();
+      probe.onload = () => {
+        const m = document.getElementById(metaId);
+        if (m) m.textContent = `${probe.naturalWidth}×${probe.naturalHeight}`;
+      };
+      probe.src = url;
+    }
     function abrirCropperParaImagem(input, labelId) {
       const file = input.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = e => abrirCropper(e.target.result, cropped => {
         croppedImageFile = cropped;
-        document.getElementById(labelId).textContent = file.name + ' (cortado)';
+        document.getElementById(labelId).textContent = file.name + ' (cortado 2:3)';
+        const url = URL.createObjectURL(cropped);
+        const img = document.getElementById('reg-image-preview');
+        if (img) {
+          img.src = url;
+          document.getElementById('reg-image-preview-wrap')?.classList.remove('hidden');
+          const probe = new Image();
+          probe.onload = () => {
+            const m = document.getElementById('reg-image-meta');
+            if (m) m.textContent = `${probe.naturalWidth}×${probe.naturalHeight} · pronto em 2:3`;
+          };
+          probe.src = url;
+        }
       });
       reader.readAsDataURL(file);
     }
@@ -2378,6 +2566,8 @@ const seoCount = seoRevs.length;
       document.getElementById('form-registrar-rpg').reset();
       toggleRegBlurOption();
       toggleRegLimitedFields();
+      document.getElementById('reg-image-preview-wrap')?.classList.add('hidden');
+      document.getElementById('reg-banner-preview-wrap')?.classList.add('hidden');
       const modal = document.getElementById('modal-registrar-rpg');
       modal.classList.remove('modal-hidden');
       void modal.offsetHeight;
@@ -2886,6 +3076,10 @@ const seoCount = seoRevs.length;
       document.getElementById('denuncia-rpg-nome').textContent = '· ' + nome;
       document.getElementById('denuncia-desc').value = '';
       document.getElementById('denuncia-prova').value = '';
+      const fi = document.getElementById('denuncia-files');
+      if (fi) fi.value = '';
+      document.getElementById('denuncia-preview').innerHTML = '';
+      document.getElementById('denuncia-files-label').textContent = 'Anexar prints (até 3 imagens)';
       document.getElementById('denuncia-prova-box').classList.add('hidden');
       document.getElementById('denuncia-error').classList.add('hidden');
       document.getElementById('denuncia-ok').classList.add('hidden');
@@ -2923,6 +3117,45 @@ const seoCount = seoRevs.length;
       }
     }
 
+    function denunciaPreview(input) {
+      const box = document.getElementById('denuncia-preview');
+      const label = document.getElementById('denuncia-files-label');
+      box.innerHTML = '';
+      const files = Array.from(input.files || []).slice(0, 3);
+      if (input.files && input.files.length > 3) {
+        const dt = new DataTransfer();
+        files.forEach(f => dt.items.add(f));
+        input.files = dt.files;
+      }
+      if (!files.length) { label.textContent = 'Anexar prints (até 3 imagens)'; return; }
+      label.textContent = files.length + ' imagem(ns) selecionada(s)';
+      files.forEach((f, i) => {
+        const url = URL.createObjectURL(f);
+        const card = document.createElement('div');
+        card.className = 'relative rounded-xl overflow-hidden border shrink-0';
+        card.style.cssText = 'border-color:var(--border);width:96px;';
+        card.innerHTML = `
+          <div style="width:96px;height:96px;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <img src="${url}" data-dim="${i}" style="max-width:100%;max-height:100%;object-fit:contain;" alt="Prova ${i + 1}">
+          </div>
+          <p class="text-[8px] text-center px-1 py-0.5" data-dimlabel="${i}" style="color:var(--text-muted);">medindo...</p>
+          <button type="button" data-rm="${i}" class="absolute top-1 right-1 w-5 h-5 rounded-full text-[9px] font-bold" style="background:rgba(0,0,0,.7);color:#fff;" title="Remover">×</button>`;
+        box.appendChild(card);
+        const probe = new Image();
+        probe.onload = () => {
+          const el = box.querySelector(`[data-dimlabel="${i}"]`);
+          if (el) el.textContent = `${probe.naturalWidth}×${probe.naturalHeight}`;
+        };
+        probe.src = url;
+        card.querySelector(`[data-rm="${i}"]`).onclick = () => {
+          const dt = new DataTransfer();
+          Array.from(input.files).forEach((ff, j) => { if (j !== i) dt.items.add(ff); });
+          input.files = dt.files;
+          denunciaPreview(input);
+        };
+      });
+    }
+
     async function enviarDenuncia() {
       const err = document.getElementById('denuncia-error');
       const ok = document.getElementById('denuncia-ok');
@@ -2930,22 +3163,31 @@ const seoCount = seoRevs.length;
       const nome = rpgAtualDenuncia();
       const description = document.getElementById('denuncia-desc').value.trim();
       const evidence = document.getElementById('denuncia-prova').value.trim();
+      const files = Array.from((document.getElementById('denuncia-files')?.files || [])).slice(0, 3);
       if (!denunciaMotivoSel) { err.textContent = 'Escolha um motivo: Golpe, Inativo ou Falso.'; err.classList.remove('hidden'); return; }
       if (description.length < 5) { err.textContent = 'Descreva com um pouco mais de detalhe.'; err.classList.remove('hidden'); return; }
-      if (denunciaMotivoSel === 'golpe' && evidence.length < 3) { err.textContent = 'Para golpe, adicione provas (links, prints, contatos).'; err.classList.remove('hidden'); return; }
+      if (denunciaMotivoSel === 'golpe' && evidence.length < 3 && !files.length) { err.textContent = 'Para golpe, anexe prints ou cole links como prova.'; err.classList.remove('hidden'); return; }
       const btn = document.getElementById('denuncia-enviar-btn');
       btn.disabled = true; btn.style.opacity = '.6';
       try {
-        const headers = { 'Content-Type': 'application/json' };
+        const form = new FormData();
+        form.append('rpgName', nome);
+        form.append('reason', denunciaMotivoSel);
+        form.append('description', description);
+        if (evidence) form.append('evidence', evidence);
+        files.forEach(f => form.append('evidenceImages', f));
+        const headers = {};
         const t = getToken();
         if (t) headers['Authorization'] = 'Bearer ' + t;
-        const res = await fetch('/api/reports', { method: 'POST', headers, body: JSON.stringify({ rpgName: nome, reason: denunciaMotivoSel, description, evidence: evidence || undefined }) });
+        const res = await fetch('/api/reports', { method: 'POST', headers, body: form });
         const data = await res.json();
         if (!res.ok) { err.textContent = data.error || 'Erro ao enviar.'; err.classList.remove('hidden'); return; }
-        ok.textContent = 'Denúncia enviada. Obrigado, o admin vai analisar.';
+        ok.textContent = 'Denúncia enviada. Nossa equipe de moderação vai analisar.';
         ok.classList.remove('hidden');
         document.getElementById('denuncia-desc').value = '';
         document.getElementById('denuncia-prova').value = '';
+        document.getElementById('denuncia-files').value = '';
+        document.getElementById('denuncia-preview').innerHTML = '';
         setTimeout(fecharModalDenuncia, 1600);
       } catch { err.textContent = 'Erro de conexão.'; err.classList.remove('hidden'); }
       finally { btn.disabled = false; btn.style.opacity = '1'; }
@@ -2991,7 +3233,8 @@ const seoCount = seoRevs.length;
               <span class="text-[9px]" style="color:var(--text-muted);">${when}${d.reporter ? ' · @' + d.reporter.replace(/</g, '&lt;') : ''}</span>
             </div>
             <p class="text-[11px] leading-relaxed" style="color:var(--text-secondary);">${d.description.replace(/</g, '&lt;')}</p>
-            ${d.evidence ? `<p class="text-[10px] rounded-xl p-2 break-words" style="background:color-mix(in srgb, #ef4444 8%, transparent);border:1px solid color-mix(in srgb, #ef4444 25%, transparent);color:var(--text-secondary);"><b>Provas:</b> ${d.evidence.replace(/</g, '&lt;')}</p>` : ''}
+            ${d.evidence ? `<p class="text-[10px] rounded-xl p-2 break-words" style="background:color-mix(in srgb, #ef4444 8%, transparent);border:1px solid color-mix(in srgb, #ef4444 25%, transparent);color:var(--text-secondary);"><b>Provas (texto):</b> ${d.evidence.replace(/</g, '&lt;')}</p>` : ''}
+            ${(d.evidenceImages && d.evidenceImages.length) ? `<div class="flex gap-2 flex-wrap">${d.evidenceImages.map(u => `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" class="w-20 h-20 object-cover rounded-xl border hover:scale-105 transition" style="border-color:var(--border);" loading="lazy"></a>`).join('')}</div>` : ''}
             ${d.adminNote ? `<p class="text-[10px]" style="color:var(--text-muted);"><b>Nota do admin:</b> ${d.adminNote.replace(/</g, '&lt;')}</p>` : ''}
             ${d.status === 'pending' ? `
             <div class="flex gap-2">
@@ -3025,6 +3268,199 @@ const seoCount = seoRevs.length;
       if (!badge) return;
       try {
         const res = await fetch('/api/reports/pending-count', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.pending > 0) { badge.textContent = data.pending > 99 ? '99+' : String(data.pending); badge.classList.remove('hidden'); }
+        else badge.classList.add('hidden');
+      } catch {}
+    }
+
+    // ── SUBMISSÃO DE RPG ──
+    let submissoesCache = [];
+    let submissoesFiltro = 'pending';
+
+    function abrirModalSubmeterRpg() {
+      const user = getUser();
+      if (!user) { abrirModalLogin(); return; }
+      ['sub-nome', 'sub-owner', 'sub-genre', 'sub-year', 'sub-desc', 'sub-link', 'sub-whatsapp', 'sub-contact'].forEach(id => { document.getElementById(id).value = ''; });
+      document.getElementById('sub-age').value = 'L';
+      const fi = document.getElementById('sub-image'); if (fi) fi.value = '';
+      const fb = document.getElementById('sub-banner'); if (fb) fb.value = '';
+      ['sub-image-preview-wrap', 'sub-banner-preview-wrap'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+      document.getElementById('sub-image-meta').textContent = '';
+      document.getElementById('sub-banner-meta').textContent = '';
+      document.getElementById('sub-image-label').textContent = 'Escolher capa';
+      document.getElementById('sub-banner-label').textContent = 'Escolher banner';
+      document.getElementById('sub-error').classList.add('hidden');
+      document.getElementById('sub-ok').classList.add('hidden');
+      document.getElementById('modal-submeter-rpg').classList.remove('modal-hidden');
+    }
+
+    function fecharModalSubmeterRpg() {
+      document.getElementById('modal-submeter-rpg').classList.add('modal-hidden');
+    }
+
+    function subPreview(input, imgId, labelId, metaId, esperado) {
+      const f = input.files?.[0];
+      const img = document.getElementById(imgId);
+      const label = document.getElementById(labelId);
+      const meta = metaId ? document.getElementById(metaId) : null;
+      const wrap = img.closest('[id$="-preview-wrap"]') || img.parentElement;
+      if (!f) {
+        img.classList.add('hidden');
+        if (wrap && wrap.id?.endsWith('-wrap')) wrap.classList.add('hidden');
+        label.textContent = 'Escolher';
+        if (meta) meta.textContent = '';
+        return;
+      }
+      label.textContent = f.name.slice(0, 22);
+      const url = URL.createObjectURL(f);
+      img.src = url;
+      img.classList.remove('hidden');
+      if (wrap && wrap.id?.endsWith('-wrap')) wrap.classList.remove('hidden');
+      if (meta) {
+        meta.textContent = 'carregando dimensões...';
+        const probe = new Image();
+        probe.onload = () => {
+          const w = probe.naturalWidth, h = probe.naturalHeight;
+          const ratio = w / h;
+          const alvo = esperado === '2:3' ? 2 / 3 : 16 / 9;
+          const desvio = Math.abs(ratio - alvo) / alvo;
+          const ok = desvio < 0.15;
+          meta.innerHTML = `${w}×${h} · ${ok ? '✓ ideal ' + esperado : '⚠ foge do ' + esperado + ' (será cortada)'}`;
+          meta.style.color = ok ? '#22c55e' : '#f59e0b';
+        };
+        probe.src = url;
+      }
+    }
+
+    async function enviarSubmissao() {
+      const err = document.getElementById('sub-error');
+      const ok = document.getElementById('sub-ok');
+      err.classList.add('hidden'); ok.classList.add('hidden');
+      const nome = document.getElementById('sub-nome').value.trim();
+      const owner = document.getElementById('sub-owner').value.trim();
+      const genre = document.getElementById('sub-genre').value.trim();
+      const ageRating = document.getElementById('sub-age').value;
+      const description = document.getElementById('sub-desc').value.trim();
+      if (!nome || !owner || !genre || !description) { err.textContent = 'Preencha nome, criadora, categoria e descrição.'; err.classList.remove('hidden'); return; }
+      if (description.length < 20) { err.textContent = 'Capriche na descrição (mínimo 20 caracteres).'; err.classList.remove('hidden'); return; }
+      const imgFile = document.getElementById('sub-image').files?.[0];
+      if (!imgFile) { err.textContent = 'A capa do RPG é obrigatória.'; err.classList.remove('hidden'); return; }
+      const btn = document.getElementById('sub-enviar-btn');
+      btn.disabled = true; btn.style.opacity = '.6';
+      try {
+        const form = new FormData();
+        form.append('name', nome);
+        form.append('owner', owner);
+        form.append('genre', genre);
+        form.append('ageRating', ageRating);
+        form.append('description', description);
+        const year = document.getElementById('sub-year').value.trim();
+        const link = document.getElementById('sub-link').value.trim();
+        const whatsapp = document.getElementById('sub-whatsapp').value.trim();
+        const contact = document.getElementById('sub-contact').value.trim();
+        if (year) form.append('year', year);
+        if (link) form.append('link', link);
+        if (whatsapp) form.append('whatsapp', whatsapp);
+        if (contact) form.append('contact', contact);
+        form.append('image', imgFile);
+        const bannerFile = document.getElementById('sub-banner').files?.[0];
+        if (bannerFile) form.append('banner', bannerFile);
+        const res = await fetch('/api/submissions', { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() }, body: form });
+        const data = await res.json();
+        if (!res.ok) { err.textContent = data.error || 'Erro ao enviar.'; err.classList.remove('hidden'); return; }
+        ok.textContent = 'Recebido! Nossa equipe vai avaliar e você será avisado.';
+        ok.classList.remove('hidden');
+        setTimeout(fecharModalSubmeterRpg, 1800);
+      } catch { err.textContent = 'Erro de conexão.'; err.classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.style.opacity = '1'; }
+    }
+
+    function abrirModalSubmissoes() {
+      document.getElementById('modal-submissoes').classList.remove('modal-hidden');
+      renderSubmissoesAdmin();
+    }
+
+    function fecharModalSubmissoes() {
+      document.getElementById('modal-submissoes').classList.add('modal-hidden');
+    }
+
+    async function renderSubmissoesAdmin() {
+      const list = document.getElementById('submissoes-list');
+      ['pending', 'all', 'approved', 'rejected'].forEach(f => {
+        const el = document.getElementById('sub-f-' + f);
+        if (!el) return;
+        const on = submissoesFiltro === f;
+        el.style.background = on ? '#a855f7' : 'var(--bg-input)';
+        el.style.color = on ? '#fff' : 'var(--text-muted)';
+      });
+      list.innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>';
+      try {
+        const res = await fetch('/api/submissions?status=' + encodeURIComponent(submissoesFiltro), { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        if (!res.ok) { list.innerHTML = '<p class="text-xs text-center py-6" style="color:var(--text-muted);">Sem permissão.</p>'; return; }
+        submissoesCache = await res.json();
+        if (!submissoesCache.length) { list.innerHTML = '<p class="text-xs text-center py-6" style="color: var(--text-muted);">Nenhuma submissão aqui.</p>'; return; }
+        list.innerHTML = submissoesCache.map(s => {
+          const st = s.status === 'pending' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;">Aguardando análise</span>'
+            : s.status === 'approved' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;">Aprovada</span>'
+            : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);">Recusada</span>';
+          const when = new Date(s.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+          return `
+          <div class="rounded-2xl border overflow-hidden" style="background:var(--bg-elevated);border-color:var(--border);">
+            <div class="flex gap-3 p-3">
+              <img src="${s.image}" class="w-16 h-24 object-cover rounded-xl shrink-0 border" style="border-color:var(--border);">
+              <div class="flex-1 min-w-0 space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  ${st}
+                  <span class="text-[12px] font-bold truncate" style="color:var(--text-primary);">${s.name.replace(/</g, '&lt;')}</span>
+                </div>
+                <p class="text-[10px]" style="color:var(--text-muted);">${s.genre.replace(/</g, '&lt;')} · ${s.owner.replace(/</g, '&lt;')} · ${s.ageRating} · por @${s.submitter.replace(/</g, '&lt;')} em ${when}</p>
+                <p class="text-[11px] leading-relaxed line-clamp-3" style="color:var(--text-secondary);">${s.description.replace(/</g, '&lt;').slice(0, 300)}</p>
+                <div class="flex gap-2 flex-wrap text-[9px]" style="color:var(--text-muted);">
+                  ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" class="underline">site</a>` : ''}
+                  ${s.whatsapp ? `<a href="${s.whatsapp}" target="_blank" rel="noopener" class="underline">whatsapp</a>` : ''}
+                  ${s.contact ? `<span>contato: ${s.contact.replace(/</g, '&lt;')}</span>` : ''}
+                </div>
+                ${s.banner ? `<a href="${s.banner}" target="_blank" rel="noopener" class="text-[9px] underline" style="color:var(--accent);">ver banner</a>` : ''}
+              </div>
+            </div>
+            ${s.adminNote ? `<p class="text-[10px] px-3 pb-1" style="color:var(--text-muted);"><b>Nota:</b> ${s.adminNote.replace(/</g, '&lt;')}</p>` : ''}
+            ${s.status === 'pending' ? `
+            <div class="flex gap-2 p-3 pt-0">
+              <input id="subnote-${s.id}" placeholder="Nota para o autor (opcional)" class="flex-1 rounded-xl px-2.5 py-2 text-[10px] focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);">
+              <button onclick="resolverSubmissao('${s.id}', 'reject')" class="px-3 py-2 rounded-xl text-[10px] font-bold" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);">Recusar</button>
+              <button onclick="resolverSubmissao('${s.id}', 'approve')" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white" style="background:#22c55e;">Aprovar</button>
+            </div>` : ''}
+          </div>`;
+        }).join('');
+      } catch { list.innerHTML = '<p class="text-xs text-center py-6" style="color:var(--text-muted);">Erro ao carregar.</p>'; }
+    }
+
+    async function resolverSubmissao(id, action) {
+      const note = document.getElementById('subnote-' + id)?.value || '';
+      try {
+        const res = await fetch('/api/submissions/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+          body: JSON.stringify({ action, adminNote: note || undefined }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Erro ao atualizar.'); return; }
+        renderSubmissoesAdmin();
+        atualizarSubmissoesBadge();
+        try {
+          const rpgsRes = await fetch('/api/rpgs');
+          if (rpgsRes.ok) { catRpgData = await rpgsRes.json(); atualizarHero(); }
+        } catch {}
+      } catch { alert('Erro de conexão.'); }
+    }
+
+    async function atualizarSubmissoesBadge() {
+      const badge = document.getElementById('submissions-count-badge');
+      if (!badge) return;
+      try {
+        const res = await fetch('/api/submissions/pending-count', { headers: { 'Authorization': 'Bearer ' + getToken() } });
         if (!res.ok) return;
         const data = await res.json();
         if (data.pending > 0) { badge.textContent = data.pending > 99 ? '99+' : String(data.pending); badge.classList.remove('hidden'); }
@@ -3218,7 +3654,7 @@ const seoCount = seoRevs.length;
         }
         const badge = document.getElementById('pending-count-badge');
         if (badge) badge.textContent = pendingReviewsData.length || '';
-        if (user.role === 'admin') atualizarReportsBadge();
+        if (user.role === 'admin') { atualizarReportsBadge(); atualizarSubmissoesBadge(); }
         document.querySelectorAll('.review-delete-btn').forEach(btn => {
           const owner = btn.getAttribute('data-owner');
           btn.classList.toggle('hidden', !(user && (user.role === 'admin' || user.username === owner)));
@@ -4533,6 +4969,8 @@ const seoCount = seoRevs.length;
         if (!document.getElementById('modal-monitoramento').classList.contains('modal-hidden')) fecharMonitoramento();
         if (!document.getElementById('modal-denuncia').classList.contains('modal-hidden')) fecharModalDenuncia();
         if (!document.getElementById('modal-denuncias').classList.contains('modal-hidden')) fecharModalDenuncias();
+        if (!document.getElementById('modal-submeter-rpg').classList.contains('modal-hidden')) fecharModalSubmeterRpg();
+        if (!document.getElementById('modal-submissoes').classList.contains('modal-hidden')) fecharModalSubmissoes();
       }
     });
 

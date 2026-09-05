@@ -9,6 +9,7 @@ export interface IReport {
   reason: ReportReason
   description: string
   evidence?: string
+  evidenceImages?: string[]
   status: ReportStatus
   adminNote?: string
   createdAt: Date
@@ -21,6 +22,7 @@ const reportSchema = new Schema<IReport>({
   reason: { type: String, enum: ['golpe', 'inativo', 'falso'], required: true },
   description: { type: String, required: true, maxlength: 2000 },
   evidence: { type: String, maxlength: 2000 },
+  evidenceImages: { type: [String], default: [] },
   status: { type: String, enum: ['pending', 'dismissed', 'actioned'], default: 'pending', index: true },
   adminNote: String,
   createdAt: { type: Date, default: Date.now },

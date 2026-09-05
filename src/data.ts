@@ -7,6 +7,7 @@ import AdModel from './models/Ad'
 import EventPostModel from './models/EventPost'
 import ReviewReplyModel from './models/ReviewReply'
 import ReportModel from './models/Report'
+import RpgSubmissionModel from './models/RpgSubmission'
 import VisitModel, { VisitType } from './models/Visit'
 import { RPG, Review, ReviewInput, User, ReviewReply, EventPost } from './types'
 
@@ -757,6 +758,7 @@ export interface Report {
   reason: ReportReason
   description: string
   evidence?: string
+  evidenceImages?: string[]
   status: ReportStatus
   adminNote?: string
   createdAt: string
@@ -772,6 +774,7 @@ function reportFromDoc(doc: any): Report {
     reason: o.reason,
     description: o.description,
     evidence: o.evidence,
+    evidenceImages: o.evidenceImages || [],
     status: o.status || 'pending',
     adminNote: o.adminNote,
     createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
@@ -779,7 +782,7 @@ function reportFromDoc(doc: any): Report {
   }
 }
 
-export async function addReport(input: { rpgName: string; reporter?: string; reason: ReportReason; description: string; evidence?: string }): Promise<Report> {
+export async function addReport(input: { rpgName: string; reporter?: string; reason: ReportReason; description: string; evidence?: string; evidenceImages?: string[] }): Promise<Report> {
   const doc = await ReportModel.create(input)
   return reportFromDoc(doc)
 }
@@ -801,4 +804,105 @@ export async function resolveReport(id: string, action: 'dismiss' | 'resolve', a
     { new: true },
   )
   return doc ? reportFromDoc(doc) : undefined
+}
+
+// ── SUBMISSÕES DE RPG ──
+export type RpgSubmissionStatus = 'pending' | 'approved' | 'rejected'
+
+export interface RpgSubmission {
+  id: string
+  name: string
+  owner: string
+  genre: string
+  image: string
+  banner?: string
+  description: string
+  link?: string
+  whatsapp?: string
+  year?: string
+  ageRating: string
+  contact?: string
+  submitter: string
+  status: RpgSubmissionStatus
+  adminNote?: string
+  createdAt: string
+  resolvedAt?: string
+}
+
+function rpgSubmissionFromDoc(doc: any): RpgSubmission {
+  const o = doc.toObject ? doc.toObject() : doc
+  return {
+    id: String(o._id),
+    name: o.name,
+    owner: o.owner,
+    genre: o.genre,
+    image: o.image,
+    banner: o.banner,
+    description: o.description,
+    link: o.link,
+    whatsapp: o.whatsapp,
+    year: o.year,
+    ageRating: o.ageRating,
+    contact: o.contact,
+    submitter: o.submitter,
+    status: o.status || 'pending',
+    adminNote: o.adminNote,
+    createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+    resolvedAt: o.resolvedAt ? (o.resolvedAt instanceof Date ? o.resolvedAt.toISOString() : o.resolvedAt) : undefined,
+  }
+}
+
+export async function addRpgSubmission(input: {
+  name: string; owner: string; genre: string; image: string; banner?: string
+  description: string; link?: string; whatsapp?: string; year?: string
+  ageRating: string; contact?: string; submitter: string
+}): Promise<RpgSubmission> {
+  const doc = await RpgSubmissionModel.create(input)
+  return rpgSubmissionFromDoc(doc)
+}
+
+export async function getRpgSubmissions(status?: string): Promise<RpgSubmission[]> {
+  const filter: Record<string, any> = status && status !== 'all' ? { status } : {}
+  const docs = await RpgSubmissionModel.find(filter).sort({ createdAt: -1 }).limit(200)
+  return docs.map(rpgSubmissionFromDoc)
+}
+
+export async function getPendingSubmissionsCount(): Promise<number> {
+  return RpgSubmissionModel.countDocuments({ status: 'pending' })
+}
+
+export async function approveRpgSubmission(id: string, adminNote?: string): Promise<RpgSubmission | undefined> {
+  const sub = await RpgSubmissionModel.findById(id)
+  if (!sub || sub.status !== 'pending') return sub ? rpgSubmissionFromDoc(sub) : undefined
+  const existing = await Rpg.findOne({ name: sub.name })
+  if (existing) return undefined
+  await Rpg.create({
+    name: sub.name,
+    owner: sub.owner,
+    genre: sub.genre,
+    image: sub.image,
+    banner: sub.banner || sub.image,
+    description: sub.description,
+    link: sub.link,
+    whatsapp: sub.whatsapp,
+    year: sub.year,
+    ageRating: sub.ageRating,
+    featured: false,
+    featuredOrder: 0,
+    tags: [],
+  })
+  sub.status = 'approved'
+  sub.adminNote = adminNote || undefined
+  sub.resolvedAt = new Date()
+  await sub.save()
+  return rpgSubmissionFromDoc(sub)
+}
+
+export async function rejectRpgSubmission(id: string, adminNote?: string): Promise<RpgSubmission | undefined> {
+  const doc = await RpgSubmissionModel.findByIdAndUpdate(
+    id,
+    { status: 'rejected', adminNote: adminNote || undefined, resolvedAt: new Date() },
+    { new: true },
+  )
+  return doc ? rpgSubmissionFromDoc(doc) : undefined
 }

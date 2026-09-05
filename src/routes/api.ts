@@ -2,8 +2,9 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
 import { Readable } from 'stream'
-import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason } from '../data'
+import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason, addRpgSubmission, getRpgSubmissions, getPendingSubmissionsCount, approveRpgSubmission, rejectRpgSubmission } from '../data'
 import ReviewModel from '../models/Review'
+import UserModel from '../models/User'
 import { ReviewInput, RPG } from '../types'
 
 const upload = multer({
@@ -582,27 +583,43 @@ router.delete('/replies/:id', async (req: Request, res: Response) => {
 })
 
 // ── DENÚNCIAS ──
-router.post('/reports', async (req: Request, res: Response) => {
-  const { rpgName, reason, description, evidence } = req.body || {}
-  if (!rpgName || !reason || !description) { res.status(400).json({ error: 'Campos obrigatórios: rpgName, reason, description.' }); return }
-  if (!['golpe', 'inativo', 'falso'].includes(reason)) { res.status(400).json({ error: 'Motivo inválido.' }); return }
-  if (String(description).trim().length < 5) { res.status(400).json({ error: 'Descreva com um pouco mais de detalhe.' }); return }
-  const rpg = await getRpgByName(String(rpgName))
-  if (!rpg) { res.status(404).json({ error: 'RPG não encontrado.' }); return }
-  let reporter: string | undefined
-  const authHeader = req.headers.authorization
-  if (authHeader) {
-    const u = await getUserByToken(authHeader.replace('Bearer ', ''))
-    if (u) reporter = u.username
-  }
-  const report = await addReport({
-    rpgName: String(rpgName),
-    reporter,
-    reason: reason as ReportReason,
-    description: String(description).slice(0, 2000),
-    evidence: evidence ? String(evidence).slice(0, 2000) : undefined,
+router.post('/reports', (req: Request, res: Response) => {
+  upload.array('evidenceImages', 3)(req, res, async (err) => {
+    if (err) { res.status(400).json({ error: err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE' ? 'Imagem de prova muito grande. Máximo 30MB.' : 'Erro no upload das provas.' }); return }
+    const { rpgName, reason, description, evidence } = req.body || {}
+    if (!rpgName || !reason || !description) { res.status(400).json({ error: 'Campos obrigatórios: rpgName, reason, description.' }); return }
+    if (!['golpe', 'inativo', 'falso'].includes(reason)) { res.status(400).json({ error: 'Motivo inválido.' }); return }
+    if (String(description).trim().length < 5) { res.status(400).json({ error: 'Descreva com um pouco mais de detalhe.' }); return }
+    const rpg = await getRpgByName(String(rpgName))
+    if (!rpg) { res.status(404).json({ error: 'RPG não encontrado.' }); return }
+    let reporter: string | undefined
+    const authHeader = req.headers.authorization
+    if (authHeader) {
+      const u = await getUserByToken(authHeader.replace('Bearer ', ''))
+      if (u) reporter = u.username
+    }
+    const files = (req.files as Express.Multer.File[]) || []
+    if (reason === 'golpe' && String(evidence || '').trim().length < 3 && !files.length) {
+      res.status(400).json({ error: 'Para golpe, anexe prints ou cole links como prova.' }); return
+    }
+    const evidenceImages: string[] = []
+    for (const f of files) {
+      try {
+        evidenceImages.push(await uploadRpgImage(f.buffer, 'rpg-reviewer/reports'))
+      } catch {
+        res.status(500).json({ error: 'Falha ao enviar imagem de prova.' }); return
+      }
+    }
+    const report = await addReport({
+      rpgName: String(rpgName),
+      reporter,
+      reason: reason as ReportReason,
+      description: String(description).slice(0, 2000),
+      evidence: evidence ? String(evidence).slice(0, 2000) : undefined,
+      evidenceImages,
+    })
+    res.status(201).json(report)
   })
-  res.status(201).json(report)
 })
 
 router.get('/reports', async (req: Request, res: Response) => {
@@ -631,6 +648,99 @@ router.patch('/reports/:id', async (req: Request, res: Response) => {
   const updated = await resolveReport(String(req.params.id), action, adminNote ? String(adminNote) : undefined)
   if (!updated) { res.status(404).json({ error: 'Denúncia não encontrada.' }); return }
   res.json(updated)
+})
+
+// ── SUBMISSÕES DE RPG ("Quer ver seu RPG aqui?") ──
+router.post('/submissions', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Faça login para enviar seu RPG.' }); return }
+  const token = authHeader.replace('Bearer ', '')
+  getUserByToken(token).then(user => {
+    if (!user) { res.status(401).json({ error: 'Sessão inválida.' }); return }
+    upload.fields([
+      { name: 'image', maxCount: 1 },
+      { name: 'banner', maxCount: 1 },
+    ])(req, res, async (err) => {
+      if (err) { res.status(400).json({ error: 'Erro no upload das imagens.' }); return }
+      const { name, owner, genre, ageRating, description, link, whatsapp, year, contact } = req.body || {}
+      if (!name || !owner || !genre || !ageRating || !description) {
+        res.status(400).json({ error: 'Preencha: nome, criadora, categoria, classificação e descrição.' }); return
+      }
+      if (String(description).trim().length < 20) { res.status(400).json({ error: 'Capriche na descrição (mínimo 20 caracteres).' }); return }
+      const existing = await getRpgByName(String(name))
+      if (existing) { res.status(400).json({ error: 'Já existe um RPG com este nome no site.' }); return }
+      const dup = await getRpgSubmissions('pending')
+      if (dup.some(s => s.name.toLowerCase() === String(name).toLowerCase())) {
+        res.status(400).json({ error: 'Este RPG já foi enviado e aguarda análise.' }); return
+      }
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+      try {
+        let imageUrl = req.body.image || ''
+        let bannerUrl = req.body.banner || ''
+        if (files?.image?.[0]) imageUrl = await uploadRpgImage(files.image[0].buffer, 'rpg-reviewer/submissions')
+        if (files?.banner?.[0]) bannerUrl = await uploadRpgImage(files.banner[0].buffer, 'rpg-reviewer/submissions')
+        if (!imageUrl) { res.status(400).json({ error: 'A capa do RPG é obrigatória.' }); return }
+        const sub = await addRpgSubmission({
+          name: String(name).slice(0, 80),
+          owner: String(owner).slice(0, 80),
+          genre: String(genre).slice(0, 40),
+          image: imageUrl,
+          banner: bannerUrl || undefined,
+          description: String(description).slice(0, 5000),
+          link: link ? String(link).slice(0, 500) : undefined,
+          whatsapp: whatsapp ? String(whatsapp).slice(0, 500) : undefined,
+          year: year ? String(year).slice(0, 10) : undefined,
+          ageRating: String(ageRating),
+          contact: contact ? String(contact).slice(0, 200) : undefined,
+          submitter: user.username,
+        })
+        res.status(201).json(sub)
+      } catch {
+        res.status(500).json({ error: 'Erro ao enviar. Tente novamente.' })
+      }
+    })
+  })
+})
+
+router.get('/submissions', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  res.json(await getRpgSubmissions(String(req.query.status || 'all')))
+})
+
+router.get('/submissions/pending-count', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  res.json({ pending: await getPendingSubmissionsCount() })
+})
+
+router.patch('/submissions/:id', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  const { action, adminNote } = req.body || {}
+  if (!['approve', 'reject'].includes(action)) { res.status(400).json({ error: 'action deve ser approve ou reject.' }); return }
+  if (action === 'approve') {
+    const ok = await approveRpgSubmission(String(req.params.id), adminNote ? String(adminNote) : undefined)
+    if (!ok) { res.status(400).json({ error: 'Não foi possível aprovar (nome duplicado ou já resolvida).' }); return }
+    try {
+      const submitter = await UserModel.findOne({ username: (ok as any).submitter })
+      if (submitter) {
+        const set = new Set([...(submitter.creatorOf || []), (ok as any).name])
+        submitter.creatorOf = [...set]
+        await submitter.save()
+      }
+    } catch {}
+    res.json(ok); return
+  }
+  const rej = await rejectRpgSubmission(String(req.params.id), adminNote ? String(adminNote) : undefined)
+  if (!rej) { res.status(404).json({ error: 'Submissão não encontrada.' }); return }
+  res.json(rej)
 })
 
 export default router
