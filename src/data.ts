@@ -494,6 +494,8 @@ async function getRpgScoreMap(): Promise<Record<string, number>> {
 function eventPostFromDoc(doc: any, rpg: RPG | null, score?: number): EventPost {
   const o = doc.toObject ? doc.toObject() : doc
   const boostHours = score !== undefined ? boostRemainingHours(o.createdAt, score) : 0
+  const pinnedUntil = o.pinnedUntil ? new Date(o.pinnedUntil) : undefined
+  const pinned = !!pinnedUntil && pinnedUntil.getTime() > Date.now()
   return {
     id: String(o._id),
     username: o.username,
@@ -502,6 +504,8 @@ function eventPostFromDoc(doc: any, rpg: RPG | null, score?: number): EventPost 
     content: o.content,
     image: o.image,
     tags: o.tags || [],
+    pinned,
+    pinnedUntil: o.pinnedUntil ? (o.pinnedUntil instanceof Date ? o.pinnedUntil.toISOString() : o.pinnedUntil) : undefined,
     timeAgo: calcTimeAgo(o.createdAt),
     createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
     rpgScore: score,
@@ -512,6 +516,11 @@ function eventPostFromDoc(doc: any, rpg: RPG | null, score?: number): EventPost 
 
 async function sortEventPosts(posts: EventPost[]): Promise<EventPost[]> {
   return posts.sort((a, b) => {
+    // 1º: fixados pelo admin (vale até pinnedUntil, absoluto)
+    const aPin = a.pinned ? 1 : 0
+    const bPin = b.pinned ? 1 : 0
+    if (aPin !== bPin) return bPin - aPin
+    if (aPin && bPin) return new Date(b.pinnedUntil as string).getTime() - new Date(a.pinnedUntil as string).getTime()
     const aBoost = a.boosted ? 1 : 0
     const bBoost = b.boosted ? 1 : 0
     if (aBoost !== bBoost) return bBoost - aBoost
@@ -559,6 +568,19 @@ export async function deleteEventPost(id: string, username: string, isAdmin: boo
   if (post.username !== username && !isAdmin) return false
   await EventPostModel.findByIdAndDelete(id)
   return true
+}
+
+// Fixa/desafixa um post no topo por N dias (só admin; absoluto, ignora score)
+export async function setEventPostPin(id: string, days: number | null): Promise<EventPost | undefined> {
+  const post = await EventPostModel.findById(id)
+  if (!post) return undefined
+  post.pinnedUntil = days && days > 0 ? new Date(Date.now() + days * 86400000) : undefined
+  await post.save()
+  const rpg = post.rpgName ? await resolveRpg(post.rpgName) : undefined
+  const ratings = await getRpgRatings()
+  const rr = post.rpgName ? ratings.find(x => x.rpg.name === post.rpgName) : undefined
+  const score = rr ? rpgScoreFromBayesian(rr.bayesianAvg) : 0
+  return eventPostFromDoc(post, rpg || null, post.rpgName ? score : undefined)
 }
 
 // ── CHAT GLOBAL ──
@@ -656,7 +678,7 @@ export async function getCreatorStats(username: string): Promise<CreatorStats | 
       score,
       repliesCount,
       postsCount,
-      boostedPosts: eventPosts.filter(p => boostRemainingHours(p.createdAt, score) > 0).length,
+      boostedPosts: eventPosts.filter(p => (p.pinnedUntil && new Date(p.pinnedUntil).getTime() > Date.now()) || boostRemainingHours(p.createdAt, score) > 0).length,
     })
   }
 

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
 import { Readable } from 'stream'
-import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, toggleReviewVote, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason, addRpgSubmission, getRpgSubmissions, getPendingSubmissionsCount, approveRpgSubmission, rejectRpgSubmission, cleanupOrphans, getChatMessages, getChatLatest, addChatMessage, deleteChatMessage } from '../data'
+import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, toggleReviewVote, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, setEventPostPin, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason, addRpgSubmission, getRpgSubmissions, getPendingSubmissionsCount, approveRpgSubmission, rejectRpgSubmission, cleanupOrphans, getChatMessages, getChatLatest, addChatMessage, deleteChatMessage } from '../data'
 import ReviewModel from '../models/Review'
 import UserModel from '../models/User'
 import { ReviewInput, RPG } from '../types'
@@ -584,6 +584,11 @@ router.post('/posts', (req: Request, res: Response) => {
         image: imageUrl,
         tags: parsedTags,
       })
+      const pinnedDays = Number(req.body?.pinnedDays)
+      if (isAdmin && Number.isFinite(pinnedDays) && pinnedDays > 0) {
+        const pinned = await setEventPostPin(String((post as any).id), Math.min(pinnedDays, 365))
+        if (pinned) { res.status(201).json(pinned); return }
+      }
       res.status(201).json(post)
     })
   })
@@ -598,6 +603,19 @@ router.delete('/posts/:id', async (req: Request, res: Response) => {
   const ok = await deleteEventPost(String(req.params.id), user.username, user.role === 'admin')
   if (!ok) { res.status(403).json({ error: 'Sem permissão ou postagem não encontrada.' }); return }
   res.json({ message: 'Postagem excluída.' })
+})
+
+// Fixa um post no topo por N dias (só admin). days=0 desafixa.
+router.patch('/posts/:id/pin', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  const days = Number(req.body?.days)
+  if (!Number.isFinite(days) || days < 0 || days > 365) { res.status(400).json({ error: 'days deve ser de 0 a 365.' }); return }
+  const post = await setEventPostPin(String(req.params.id), days)
+  if (!post) { res.status(404).json({ error: 'Postagem não encontrada.' }); return }
+  res.json(post)
 })
 
 // ── RESPOSTAS A AVALIAÇÕES ──

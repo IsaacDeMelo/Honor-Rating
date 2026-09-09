@@ -366,40 +366,43 @@ const seoCount = seoRevs.length;
     <!-- VISÃO DO FEED (ALTERNA COM CATÁLOGO) -->
     <div id="feed-view" class="hidden">
     
-    <!-- SEÇÃO STORIES (MELHORES RPGs) -->
+    <!-- SEÇÃO STORIES (USUÁRIOS EM DESTAQUE) -->
     <section id="feed-destaques-section" class="py-5 border-b" style="border-color: var(--border); background-color: color-mix(in srgb, var(--bg-primary) 60%, transparent);">
-      <h2 style="color: var(--text-muted);" class="text-[10px] uppercase tracking-widest font-bold px-5 mb-3 font-title">Em Destaque</h2>
+      <h2 style="color: var(--text-muted);" class="text-[10px] uppercase tracking-widest font-bold px-5 mb-3 font-title">Destaques da comunidade</h2>
       
       <div class="flex space-x-4 overflow-x-auto px-5 no-scrollbar">
-        
-        <% rpgs.filter(r => r.featured).forEach(rpg => { %>
-        <button onclick="abrirDetalheRpg('<%= rpg.name %>')" class="flex flex-col items-center space-y-1 flex-shrink-0 focus:outline-none group">
+        <%
+        const _top10 = (rpgRatings || []).slice(0, 10).map(x => x.rpg.name);
+        const _cont = {};
+        (allReviews || []).forEach(r => { _cont[r.username] = (_cont[r.username] || 0) + 1; });
+        const _spot = (users || []).map(u => {
+          const n = _cont[u.username] || 0;
+          const tops = (u.creatorOf || []).filter(nm => _top10.includes(nm));
+          return { u, n, tops, score: n + tops.length * 5 };
+        }).filter(x => x.n > 0 || x.tops.length > 0)
+        .sort((a, b) => b.score - a.score || a.u.username.localeCompare(b.u.username)).slice(0, 10);
+        %>
+        <% _spot.forEach(s => { %>
+        <button onclick="verPerfil('<%= s.u.username %>')" class="flex flex-col items-center space-y-1 flex-shrink-0 focus:outline-none group">
           <div class="w-16 h-16 rounded-full p-0.5 overflow-hidden transition-all duration-300 group-hover:scale-105" style="box-shadow: 0 0 0 2px var(--accent-glow); background: var(--bg-card);">
-            <img src="<%= rpg.image %>" class="w-full h-full object-cover rounded-full" alt="<%= rpg.name %>">
-          </div>
-          <span style="color: var(--text-secondary);" class="text-[11px] font-medium truncate w-16 text-center group-hover:text-white transition"><%= rpg.name %></span>
-          <% const sr = rpgRatings.find(r => r.rpg.name === rpg.name) %>
-          <div class="flex items-center gap-[1px]">
-            <% if (sr && sr.reviewCount > 0) { %>
-              <% for (let i = 1; i <= 5; i++) { %>
-                <% if (i <= Math.floor(sr.avgRating)) { %>
-                  <i class="fas fa-star" style="color: var(--star); font-size: 6px;"></i>
-                <% } else if (i === Math.ceil(sr.avgRating) && sr.avgRating % 1 !== 0) { %>
-                  <i class="fas fa-star-half-alt" style="color: var(--star); font-size: 6px;"></i>
-                <% } else { %>
-                  <i class="far fa-star" style="color: var(--text-muted); font-size: 6px;"></i>
-                <% } %>
-              <% } %>
-              <span class="text-[8px] ml-0.5 font-semibold" style="color: var(--text-muted);"><%= sr.reviewCount %></span>
+            <% if (s.u.avatar) { %>
+            <img src="<%= s.u.avatar %>" class="w-full h-full object-cover rounded-full" alt="<%= s.u.username %>">
             <% } else { %>
-              <% for (let i = 1; i <= 5; i++) { %>
-                <i class="fa-regular fa-star" style="color: var(--text-muted); font-size: 6px;"></i>
-              <% } %>
+            <span class="w-full h-full rounded-full flex items-center justify-center text-xl font-bold" style="background: var(--accent-dim); color: var(--accent);"><%= s.u.username.charAt(0).toUpperCase() %></span>
+            <% } %>
+          </div>
+          <span style="color: var(--text-secondary);" class="text-[11px] font-medium truncate w-16 text-center group-hover:text-white transition"><%= s.u.username %></span>
+          <div class="flex items-center gap-[1px]">
+            <% if (s.tops.length) { %>
+            <i class="fa-solid fa-trophy" style="color:var(--star);font-size:6px;"></i>
+            <span class="text-[8px] ml-0.5 font-semibold" style="color: var(--text-muted);">Top 10</span>
+            <% } else { %>
+            <i class="fas fa-star" style="color:var(--star);font-size:6px;"></i>
+            <span class="text-[8px] ml-0.5 font-semibold" style="color: var(--text-muted);"><%= s.n %></span>
             <% } %>
           </div>
         </button>
         <% }) %>
-
       </div>
     </section>
 
@@ -424,7 +427,9 @@ const seoCount = seoRevs.length;
       <div class="feed-card feed-event-card rounded-2xl p-4.5 border transition-all duration-300 shadow-sm flex flex-col space-y-3.5" data-rpg="<%= post.rpg ? post.rpg.name : '' %>" style="background: color-mix(in srgb, #22c55e 6%, var(--bg-card) 40%, transparent); border-color: color-mix(in srgb, #22c55e 30%, var(--border));">
         <div class="flex items-center justify-between gap-2">
           <span class="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase shrink-0" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;"><i class="fa-solid fa-bullhorn text-[8px] mr-1"></i><%= post.rpg ? 'Evento do Criador' : 'Comunicado' %></span>
-          <% if (post.boosted) { %>
+          <% if (post.pinned) { %>
+          <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#a855f720;color:#c084fc;border:1px solid #a855f740;" title="Fixado pelo admin."><i class="fa-solid fa-thumbtack text-[8px] mr-1"></i>Fixado</span>
+          <% } else if (post.boosted) { %>
           <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;" title="Quanto mais avaliações boas o sistema tem, mais tempo este post fica no topo."><i class="fa-solid fa-rocket text-[8px] mr-1"></i>Em alta · <%= Math.round(post.boostHours) %>h</span>
           <% } else { %>
           <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);" title="O impulso deste post terminou e ele está caindo conforme o tempo."><i class="fa-solid fa-arrow-trend-down text-[8px] mr-1"></i>Caindo</span>
@@ -443,7 +448,7 @@ const seoCount = seoRevs.length;
         <% } %>
         <h4 class="text-sm font-bold" style="color: var(--text-primary);"><%= post.title %></h4>
         <% if (post.image) { %>
-        <a href="<%= post.image %>" target="_blank" rel="noopener"><img src="<%= post.image %>" class="w-full max-h-64 object-cover rounded-xl border" style="border-color:var(--border);" loading="lazy" alt=""></a>
+        <a href="<%= post.image %>" target="_blank" rel="noopener"><img src="<%= post.image %>" class="w-full object-contain rounded-xl border" style="border-color:var(--border);max-height:75vh;background:#000;" loading="lazy" alt=""></a>
         <% } %>
         <p class="text-xs leading-relaxed pl-1" style="color: var(--text-secondary);"><%= post.content %></p>
         <% if (post.tags && post.tags.length) { %>
@@ -457,9 +462,14 @@ const seoCount = seoRevs.length;
           <span class="text-[10px] font-semibold flex items-center gap-1" style="color: #22c55e;">
             <i class="fa-solid fa-award"></i> <%= post.username %>
           </span>
-          <button onclick="deletarEvento('<%= post.id %>', this)" class="event-delete-btn text-[9px] px-2 py-1 rounded-lg font-bold transition-all hidden active:scale-[0.94]" style="color: #ef4444; background: color-mix(in srgb, #ef4444 10%, transparent); border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);" data-owner="<%= post.username %>">
-            <i class="fa-solid fa-trash-alt mr-1"></i>Excluir
-          </button>
+          <span class="inline-flex items-center gap-1.5">
+            <button onclick="fixarPost('<%= post.id %>')" class="event-pin-btn text-[9px] px-2 py-1 rounded-lg font-bold transition-all hidden active:scale-[0.94]" style="color: #c084fc; background: color-mix(in srgb, #a855f7 10%, transparent); border: 1px solid color-mix(in srgb, #a855f7 25%, transparent);">
+              <i class="fa-solid fa-thumbtack mr-1"></i><%= post.pinned ? 'Ajustar' : 'Fixar' %>
+            </button>
+            <button onclick="deletarEvento('<%= post.id %>', this)" class="event-delete-btn text-[9px] px-2 py-1 rounded-lg font-bold transition-all hidden active:scale-[0.94]" style="color: #ef4444; background: color-mix(in srgb, #ef4444 10%, transparent); border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);" data-owner="<%= post.username %>">
+              <i class="fa-solid fa-trash-alt mr-1"></i>Excluir
+            </button>
+          </span>
         </div>
       </div>
       <% }) %>
@@ -1325,7 +1335,7 @@ const seoCount = seoRevs.length;
           </button>
         </div>
         <div class="p-4 space-y-2">
-          <p class="text-[10px] leading-relaxed mb-1" style="color: var(--text-muted);">Os RPGs marcados aparecem no topo do carrossel do catálogo e na seção "Em Destaque" do feed.</p>
+          <p class="text-[10px] leading-relaxed mb-1" style="color: var(--text-muted);">Os RPGs marcados aparecem no topo do carrossel do catálogo.</p>
           <p class="text-[10px] leading-relaxed mb-3" style="color: var(--text-muted);"><i class="fa-solid fa-arrow-up-long mr-1"></i>Use as setas para definir a ordem do carrossel (1º = primeiro slide). A ordem é salva automaticamente.</p>
           <div id="destaques-list" class="space-y-2">
             <p class="text-xs text-center py-6" style="color: var(--text-muted);">Carregando...</p>
@@ -1648,6 +1658,10 @@ const seoCount = seoRevs.length;
           <div>
             <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Tags (opcional, separadas por vírgula)</label>
             <input id="event-tags" type="text" maxlength="200" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Ex: inscrições, torneio, live">
+          </div>
+          <div id="event-pin-box" class="hidden">
+            <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Fixar no topo (só admin, dias — vazio = sem fixar)</label>
+            <input id="event-pinned-days" type="number" min="0" max="365" placeholder="Ex: 5" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);">
           </div>
           <p id="event-error" class="hidden text-[10px] font-bold" style="color: #ef4444;"></p>
           <button onclick="publicarEvento()" class="w-full text-white font-bold py-2.5 rounded-xl text-xs transition-all active:scale-[0.97]" style="background: var(--accent);">
@@ -3992,6 +4006,9 @@ const seoCount = seoRevs.length;
           const owner = btn.getAttribute('data-owner');
           btn.classList.toggle('hidden', !(user && (user.role === 'admin' || user.username === owner)));
         });
+        document.querySelectorAll('.event-pin-btn').forEach(btn => {
+          btn.classList.toggle('hidden', !(user && user.role === 'admin'));
+        });
         document.querySelectorAll('.reply-delete-btn').forEach(btn => {
           const owner = btn.getAttribute('data-owner');
           btn.classList.toggle('hidden', !(user && (user.role === 'admin' || user.username === owner)));
@@ -4903,6 +4920,9 @@ const seoCount = seoRevs.length;
       document.getElementById('event-image-label').textContent = 'Anexar imagem';
       document.getElementById('event-image-preview').classList.add('hidden');
       document.getElementById('event-image-preview').innerHTML = '';
+      document.getElementById('event-pin-box').classList.toggle('hidden', user.role !== 'admin');
+      const pinInput = document.getElementById('event-pinned-days');
+      if (pinInput) pinInput.value = '';
       document.getElementById('event-error').classList.add('hidden');
       document.getElementById('modal-postar-evento').classList.remove('modal-hidden');
     }
@@ -4939,6 +4959,8 @@ const seoCount = seoRevs.length;
         if (tags) form.append('tags', tags);
         const imgFile = document.getElementById('event-image').files?.[0];
         if (imgFile) form.append('image', imgFile);
+        const pinDays = document.getElementById('event-pinned-days')?.value;
+        if (pinDays && Number(pinDays) > 0) form.append('pinnedDays', String(Number(pinDays)));
         const headers = { 'Authorization': 'Bearer ' + getToken() };
         const res = await fetch('/api/posts', { method: 'POST', headers, body: form });
         const data = await res.json();
@@ -4988,6 +5010,12 @@ const seoCount = seoRevs.length;
       div.setAttribute('data-rpg', p.rpg ? p.rpg.name : '');
       const isGeral = !p.rpg;
       const selo = isGeral ? 'Comunicado' : 'Evento do Criador';
+      const diasFixado = p.pinned && p.pinnedUntil ? Math.max(1, Math.ceil((new Date(p.pinnedUntil).getTime() - Date.now()) / 86400000)) : 0;
+      const impulso = p.pinned
+        ? `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#a855f720;color:#c084fc;border:1px solid #a855f740;" title="Fixado pelo admin até ${new Date(p.pinnedUntil).toLocaleDateString('pt-BR')}."><i class="fa-solid fa-thumbtack text-[8px] mr-1"></i>Fixado · ${diasFixado}d</span>`
+        : (p.boosted
+          ? `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;" title="Quanto mais avaliações boas o sistema tem, mais tempo este post fica no topo."><i class="fa-solid fa-rocket text-[8px] mr-1"></i>Em alta · ${Math.round(p.boostHours)}h</span>`
+          : `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);" title="O impulso deste post terminou e ele está caindo conforme o tempo."><i class="fa-solid fa-arrow-trend-down text-[8px] mr-1"></i>Caindo</span>`);
       const rpgBlock = p.rpg ? `
         <div class="flex items-center space-x-3 p-2.5 rounded-xl border" style="background: color-mix(in srgb, var(--bg-elevated) 40%, transparent); border-color: var(--border);">
           <img src="${p.rpg.image}" class="w-12 h-14 object-cover rounded-lg shadow-md" alt="">
@@ -5001,49 +5029,94 @@ const seoCount = seoRevs.length;
       div.innerHTML = `
         <div class="flex items-center justify-between gap-2">
           <span class="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase shrink-0" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;"><i class="fa-solid fa-bullhorn text-[8px] mr-1"></i>${selo}</span>
-          ${p.boosted
-            ? `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;" title="Quanto mais avaliações boas o sistema tem, mais tempo este post fica no topo."><i class="fa-solid fa-rocket text-[8px] mr-1"></i>Em alta · ${Math.round(p.boostHours)}h</span>`
-            : `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);" title="O impulso deste post terminou e ele está caindo conforme o tempo."><i class="fa-solid fa-arrow-trend-down text-[8px] mr-1"></i>Caindo</span>`}
+          ${impulso}
           <span class="text-[9px]" style="color: var(--text-muted);">${p.timeAgo}</span>
         </div>
         ${rpgBlock}
         <h4 class="text-sm font-bold" style="color: var(--text-primary);">${p.title}</h4>
-        ${p.image ? `<a href="${p.image}" target="_blank" rel="noopener"><img src="${p.image}" class="w-full max-h-64 object-cover rounded-xl border" style="border-color:var(--border);" loading="lazy" alt=""></a>` : ''}
+        ${p.image ? `<a href="${p.image}" target="_blank" rel="noopener"><img src="${p.image}" class="w-full object-contain rounded-xl border" style="border-color:var(--border);max-height:75vh;background:#000;" loading="lazy" alt=""></a>` : ''}
         <p class="text-xs leading-relaxed pl-1" style="color: var(--text-secondary);">${p.content}</p>
         ${tagsHtml}
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-semibold flex items-center gap-1" style="color: #22c55e;"><i class="fa-solid fa-award"></i> ${p.username}</span>
-          <button onclick="deletarEvento('${p.id}', this)" class="event-delete-btn text-[9px] px-2 py-1 rounded-lg font-bold transition-all hidden active:scale-[0.94]" style="color: #ef4444; background: color-mix(in srgb, #ef4444 10%, transparent); border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);" data-owner="${p.username}">
-            <i class="fa-solid fa-trash-alt mr-1"></i>Excluir
-          </button>
+          <span class="inline-flex items-center gap-1.5">
+            <button onclick="fixarPost('${p.id}')" class="event-pin-btn text-[9px] px-2 py-1 rounded-lg font-bold transition-all hidden active:scale-[0.94]" style="color: #c084fc; background: color-mix(in srgb, #a855f7 10%, transparent); border: 1px solid color-mix(in srgb, #a855f7 25%, transparent);">
+              <i class="fa-solid fa-thumbtack mr-1"></i>${p.pinned ? 'Ajustar' : 'Fixar'}
+            </button>
+            <button onclick="deletarEvento('${p.id}', this)" class="event-delete-btn text-[9px] px-2 py-1 rounded-lg font-bold transition-all hidden active:scale-[0.94]" style="color: #ef4444; background: color-mix(in srgb, #ef4444 10%, transparent); border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);" data-owner="${p.username}">
+              <i class="fa-solid fa-trash-alt mr-1"></i>Excluir
+            </button>
+          </span>
         </div>`;
       const storedUser = getUser();
       if (storedUser) {
         const btn = div.querySelector('.event-delete-btn');
         if (btn) btn.classList.toggle('hidden', !(storedUser.role === 'admin' || storedUser.username === p.username));
+        const pinBtn = div.querySelector('.event-pin-btn');
+        if (pinBtn) pinBtn.classList.toggle('hidden', storedUser.role !== 'admin');
       }
       return div;
+    }
+
+    async function fixarPost(id) {
+      const user = getUser();
+      if (!user || user.role !== 'admin') return;
+      const atual = (typeof catEventPostsData !== 'undefined' ? catEventPostsData : []).find(p => p.id === id);
+      const entrada = prompt(
+        atual?.pinned ? 'Post fixado. Digite 0 para desafixar ou N dias para ajustar:' : 'Fixar este post no topo por quantos dias? (0 cancela)',
+        atual?.pinned ? '0' : '5'
+      );
+      if (entrada === null) return;
+      const days = Number(entrada);
+      if (!Number.isFinite(days) || days < 0 || days > 365) { alert('Digite um número de 0 a 365.'); return; }
+      try {
+        const res = await fetch('/api/posts/' + id + '/pin', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+          body: JSON.stringify({ days })
+        });
+        if (!res.ok) { alert('Erro ao fixar.'); return; }
+        await refreshPosts();
+      } catch { alert('Erro de conexão.'); }
+    }
+
+    // Usuários em destaque: top avaliadores + donos de RPGs do top 10
+    function calcularSpotlight() {
+      const top10 = (catRpgRatings || []).slice(0, 10).map(x => x.rpg.name);
+      const cont = {};
+      (allReviewData || []).forEach(r => { cont[r.username] = (cont[r.username] || 0) + 1; });
+      return (catUsersData || [])
+        .map(u => {
+          const n = cont[u.username] || 0;
+          const tops = (u.creatorOf || []).filter(nm => top10.includes(nm));
+          return { u, n, tops, score: n + tops.length * 5 };
+        })
+        .filter(x => x.n > 0 || x.tops.length > 0)
+        .sort((a, b) => b.score - a.score || a.u.username.localeCompare(b.u.username))
+        .slice(0, 10);
     }
 
     function renderFeedDestaques() {
       const section = document.getElementById('feed-destaques-section');
       if (!section) return;
-      const feats = catRpgData.filter(r => r.featured).sort((a, b) => ((a.featuredOrder ?? 0) - (b.featuredOrder ?? 0)) || a.name.localeCompare(b.name));
-      if (!feats.length) { section.style.display = 'none'; return; }
+      const spot = calcularSpotlight();
+      if (!spot.length) { section.style.display = 'none'; return; }
       section.style.display = '';
       const container = section.querySelector('.no-scrollbar');
-      container.innerHTML = feats.map(r => {
-        const sr = catRpgRatings.find(x => x.rpg.name === r.name);
-        const stars = sr && sr.reviewCount > 0
-          ? '<i class="fas fa-star" style="color:var(--star);font-size:6px;"></i>'.repeat(Math.floor(sr.avgRating)) + (sr.avgRating % 1 !== 0 ? '<i class="fas fa-star-half-alt" style="color:var(--star);font-size:6px;"></i>' : '') + `<span class="text-[8px] ml-0.5 font-semibold" style="color:var(--text-muted);">${sr.reviewCount}</span>`
-          : '<i class="fa-regular fa-star" style="color:var(--text-muted);font-size:6px;"></i>'.repeat(5);
+      container.innerHTML = spot.map(s => {
+        const avatar = s.u.avatar
+          ? `<img src="${s.u.avatar}" class="w-full h-full object-cover rounded-full" alt="">`
+          : `<span class="w-full h-full rounded-full flex items-center justify-center text-xl font-bold" style="background: var(--accent-dim); color: var(--accent);">${s.u.username.charAt(0).toUpperCase()}</span>`;
+        const mini = s.tops.length
+          ? '<i class="fa-solid fa-trophy" style="color:var(--star);font-size:6px;"></i><span class="text-[8px] ml-0.5 font-semibold" style="color:var(--text-muted);">Top 10</span>'
+          : `<i class="fas fa-star" style="color:var(--star);font-size:6px;"></i><span class="text-[8px] ml-0.5 font-semibold" style="color:var(--text-muted);">${s.n}</span>`;
         return `
-          <button onclick="abrirDetalheRpg('${r.name.replace(/'/g, "\\'")}')" class="flex flex-col items-center space-y-1 flex-shrink-0 focus:outline-none group">
+          <button onclick="verPerfil('${s.u.username.replace(/'/g, "\\'")}')" class="flex flex-col items-center space-y-1 flex-shrink-0 focus:outline-none group" title="${s.tops.length ? 'Dono de RPG no Top 10: ' + s.tops.join(', ') : s.n + ' avaliações'}">
             <div class="w-16 h-16 rounded-full p-0.5 overflow-hidden transition-all duration-300 group-hover:scale-105" style="box-shadow: 0 0 0 2px var(--accent-glow); background: var(--bg-card);">
-              <img src="${r.image}" class="w-full h-full object-cover rounded-full" alt="">
+              ${avatar}
             </div>
-            <span style="color: var(--text-secondary);" class="text-[11px] font-medium truncate w-16 text-center group-hover:text-white transition">${r.name}</span>
-            <div class="flex items-center gap-[1px]">${stars}</div>
+            <span style="color: var(--text-secondary);" class="text-[11px] font-medium truncate w-16 text-center group-hover:text-white transition">${s.u.username}</span>
+            <div class="flex items-center gap-[1px]">${mini}</div>
           </button>`;
       }).join('');
     }

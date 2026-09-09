@@ -73,6 +73,8 @@ export interface EventPost {
   content: string
   image?: string
   tags?: string[]
+  pinned?: boolean
+  pinnedUntil?: string
   timeAgo: string
   createdAt: string
   rpgScore?: number

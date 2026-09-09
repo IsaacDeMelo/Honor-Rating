@@ -7,6 +7,7 @@ export interface IEventPost {
   content: string
   image?: string
   tags?: string[]
+  pinnedUntil?: Date
   createdAt: Date
 }
 
@@ -17,6 +18,7 @@ const eventPostSchema = new Schema<IEventPost>({
   content: { type: String, required: true },
   image: String,
   tags: { type: [String], default: [] },
+  pinnedUntil: Date,
   createdAt: { type: Date, default: Date.now },
 })
 
