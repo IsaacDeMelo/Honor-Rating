@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
 import { Readable } from 'stream'
-import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason, addRpgSubmission, getRpgSubmissions, getPendingSubmissionsCount, approveRpgSubmission, rejectRpgSubmission } from '../data'
+import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason, addRpgSubmission, getRpgSubmissions, getPendingSubmissionsCount, approveRpgSubmission, rejectRpgSubmission, cleanupOrphans } from '../data'
 import ReviewModel from '../models/Review'
 import UserModel from '../models/User'
 import { ReviewInput, RPG } from '../types'
@@ -110,8 +110,12 @@ router.post('/reviews', async (req: Request, res: Response) => {
       }
     }
 
-    const review = await addReview(input, user.username)
-    res.status(201).json(review)
+    try {
+      const review = await addReview(input, user.username)
+      res.status(201).json(review)
+    } catch {
+      res.status(400).json({ error: 'RPG não encontrado.' })
+    }
   })
 })
 
@@ -741,6 +745,16 @@ router.patch('/submissions/:id', async (req: Request, res: Response) => {
   const rej = await rejectRpgSubmission(String(req.params.id), adminNote ? String(adminNote) : undefined)
   if (!rej) { res.status(404).json({ error: 'Submissão não encontrada.' }); return }
   res.json(rej)
+})
+
+// ── LIMPEZA DE ÓRFÃOS (ADMIN, one-shot) ──
+// Remove avaliações/posts de RPGs que já foram deletados.
+router.post('/admin/cleanup-orphans', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  res.json(await cleanupOrphans())
 })
 
 export default router

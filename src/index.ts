@@ -13,7 +13,7 @@ import publicRouter, { getPageData } from './routes/public'
 import apiRouter from './routes/api'
 import authRouter from './routes/auth'
 import { connectDatabase } from './database'
-import { toSlug, getRpgs, recordVisit } from './data'
+import { toSlug, getRpgs, recordVisit, cleanupOrphans } from './data'
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -97,8 +97,15 @@ app.listen(PORT, () => {
 // 2. Chame a conexão do banco em segundo plano de forma independente
 console.log('Tentando conectar ao banco de dados...')
 connectDatabase()
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB conectado com sucesso!')
+    try {
+      const r = await cleanupOrphans()
+      const total = r.reviews + r.replies + r.eventPosts + r.visits
+      if (total > 0) console.log(`Limpeza automática de órfãos: ${JSON.stringify(r)}`)
+    } catch (e) {
+      console.error('Falha na limpeza automática de órfãos:', e)
+    }
   })
   .catch((err) => {
     console.error('Erro crítico ao conectar no MongoDB:', err)

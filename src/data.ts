@@ -100,11 +100,6 @@ async function resolveRpg(rpgName: string): Promise<RPG | undefined> {
   return doc ? rpgFromDoc(doc) : undefined
 }
 
-async function firstRpg(): Promise<RPG | undefined> {
-  const doc = await Rpg.findOne()
-  return doc ? rpgFromDoc(doc) : undefined
-}
-
 export async function getRpgByName(name: string): Promise<RPG | undefined> {
   return resolveRpg(name)
 }
@@ -121,8 +116,11 @@ export async function attachRpgs(docs: any[]): Promise<Review[]> {
   for (const doc of rpgDocs) {
     if (doc) rpgMap[doc.name] = rpgFromDoc(doc)
   }
-  const fallback = rpgDocs.find(Boolean) ? rpgMap[rpgDocs.find(Boolean)!.name] : undefined
-  return docs.map(d => reviewFromDoc(d, rpgMap[d.rpgName] || fallback || {} as RPG))
+  // Sem fallback: reviews órfãs (RPG deletado) são descartadas em vez de
+  // aparecerem num RPG qualquer que "nem tem" avaliações.
+  return docs
+    .filter(d => rpgMap[d.rpgName])
+    .map(d => reviewFromDoc(d, rpgMap[d.rpgName]))
 }
 
 export async function getReviews(all?: boolean): Promise<Review[]> {
@@ -142,7 +140,8 @@ export async function getPendingReviews(): Promise<Review[]> {
 }
 
 export async function addReview(input: ReviewInput, username: string): Promise<Review> {
-  const rpg = await resolveRpg(input.rpgName) || await firstRpg() || {} as RPG
+  const rpg = await resolveRpg(input.rpgName)
+  if (!rpg) throw new Error('RPG não encontrado.')
   const user = await UserModel.findOne({ username })
   const isAdmin = user?.role === 'admin'
 
@@ -165,7 +164,8 @@ export async function approveReview(reviewId: string): Promise<Review | undefine
     { new: true },
   )
   if (!doc) return undefined
-  const rpg = await resolveRpg(doc.rpgName) || await firstRpg() || {} as RPG
+  const rpg = await resolveRpg(doc.rpgName)
+  if (!rpg) return undefined
   return reviewFromDoc(doc, rpg!)
 }
 
@@ -230,7 +230,22 @@ export async function getFeaturedRpgs(): Promise<RPG[]> {
 
 export async function deleteRpg(name: string): Promise<boolean> {
   const doc = await Rpg.findOneAndDelete({ name })
-  return !!doc
+  if (!doc) return false
+  // Cascata: sem isso as avaliações/posts do RPG deletado ficavam órfãos
+  // e (pelo fallback antigo) apareciam em outro RPG.
+  try {
+    const reviews = await ReviewModel.find({ rpgName: name }, { _id: 1 })
+    const reviewIds = reviews.map(r => String(r._id))
+    if (reviewIds.length) {
+      await ReviewReplyModel.deleteMany({ reviewId: { $in: reviewIds } })
+    }
+    await ReviewModel.deleteMany({ rpgName: name })
+    await EventPostModel.deleteMany({ rpgName: name })
+    await VisitModel.deleteMany({ rpg: name })
+  } catch {
+    // RPG já foi deletado; falha na limpeza não deve reverter
+  }
+  return true
 }
 
 function hashPassword(password: string): string {
@@ -490,7 +505,9 @@ export async function getEventPosts(limit?: number): Promise<EventPost[]> {
   for (const doc of rpgDocs) {
     if (doc) rpgMap[doc.name] = rpgFromDoc(doc)
   }
-  const posts = docs.map(d => eventPostFromDoc(d, rpgMap[d.rpgName] || {} as RPG, scoreMap[d.rpgName]))
+  const posts = docs
+    .filter(d => rpgMap[d.rpgName])
+    .map(d => eventPostFromDoc(d, rpgMap[d.rpgName], scoreMap[d.rpgName]))
   await sortEventPosts(posts)
   return limit ? posts.slice(0, limit) : posts
 }
@@ -905,4 +922,29 @@ export async function rejectRpgSubmission(id: string, adminNote?: string): Promi
     { new: true },
   )
   return doc ? rpgSubmissionFromDoc(doc) : undefined
+}
+
+// ── LIMPEZA DE ÓRFÃOS (one-shot para base já contaminada) ──
+export async function cleanupOrphans(): Promise<{ reviews: number; replies: number; eventPosts: number; visits: number }> {
+  const rpgs = await Rpg.find({}, { name: 1 })
+  const valid = new Set(rpgs.map(r => r.name))
+  const orphanReviews = await ReviewModel.find({ rpgName: { $nin: [...valid] } }, { _id: 1 })
+  const orphanIds = orphanReviews.map(r => String(r._id))
+  let replies = 0
+  if (orphanIds.length) {
+    const rr = await ReviewReplyModel.deleteMany({ reviewId: { $in: orphanIds } })
+    replies = rr.deletedCount || 0
+  }
+  const [rev, posts, visits] = await Promise.all([
+    ReviewModel.deleteMany({ rpgName: { $nin: [...valid] } }),
+    EventPostModel.deleteMany({ rpgName: { $nin: [...valid] } }),
+    // Só rpgview tem campo rpg: sem o type, o $nin apagaria pageview/search (sem campo rpg)
+    VisitModel.deleteMany({ type: 'rpgview', rpg: { $nin: [...valid] } }),
+  ])
+  return {
+    reviews: rev.deletedCount || 0,
+    replies,
+    eventPosts: posts.deletedCount || 0,
+    visits: visits.deletedCount || 0,
+  }
 }
