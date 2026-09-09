@@ -419,18 +419,6 @@ const seoCount = seoRevs.length;
 
     <!-- FEED DE AVALIAÇÕES -->
     <main id="feed-container" class="flex-1 p-4 lg:p-6 space-y-4 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4 xl:grid-cols-3 overflow-y-auto">
-      <button onclick="abrirChat()" class="feed-card rounded-2xl p-3 border flex items-center gap-3 text-left transition active:scale-[0.99] lg:col-span-2 xl:col-span-3" style="background: color-mix(in srgb, var(--accent) 8%, transparent); border-color: color-mix(in srgb, var(--accent) 30%, transparent);">
-        <span class="relative w-10 h-10 rounded-full flex items-center justify-center text-sm text-white shrink-0" style="background: linear-gradient(135deg, var(--accent), #a855f7);">
-          <i class="fa-solid fa-comments"></i>
-          <span id="chat-row-dot" class="hidden absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style="background:#ef4444;border-color:var(--bg-card);box-shadow:0 0 6px #ef4444;"></span>
-        </span>
-        <span class="flex-1 min-w-0">
-          <span class="block text-xs font-bold" style="color:var(--text-primary);">Chat global da comunidade</span>
-          <span class="block text-[10px] truncate" id="chat-row-sub" style="color:var(--text-muted);">Converse, mande prints e links</span>
-        </span>
-        <span id="chat-row-new" class="hidden text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#ef4444;color:#fff;"></span>
-        <i class="fa-solid fa-chevron-right text-[10px] shrink-0" style="color:var(--text-muted);"></i>
-      </button>
       
       <% eventPosts.forEach(post => { %>
       <div class="feed-card feed-event-card rounded-2xl p-4.5 border transition-all duration-300 shadow-sm flex flex-col space-y-3.5" data-rpg="<%= post.rpg ? post.rpg.name : '' %>" style="background: color-mix(in srgb, #22c55e 6%, var(--bg-card) 40%, transparent); border-color: color-mix(in srgb, #22c55e 30%, var(--border));">
@@ -548,9 +536,8 @@ const seoCount = seoRevs.length;
     <!-- NAVBAR INFERIOR -->
     <nav style="border-color: var(--border);" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md lg:max-w-5xl border-t px-6 py-4 flex justify-between items-center z-50 glassmorphism rounded-t-2xl">
       
-      <button id="nav-feed" onclick="abrirFeed()" class="relative flex flex-col items-center focus:outline-none transition group" style="color: var(--text-muted);">
+      <button id="nav-feed" onclick="abrirFeed()" class="flex flex-col items-center focus:outline-none transition group" style="color: var(--text-muted);">
         <i class="fa-solid fa-comment-dots text-base group-hover:scale-105 transition-transform"></i>
-        <span id="nav-feed-dot" class="hidden absolute top-0 right-1 w-2.5 h-2.5 rounded-full" style="background:#ef4444;box-shadow:0 0 6px #ef4444;"></span>
         <span class="text-[9px] mt-1 font-semibold tracking-wider uppercase font-title">Feed</span>
       </button>
 
@@ -558,6 +545,12 @@ const seoCount = seoRevs.length;
       <button id="nav-catalogo" onclick="abrirCatalogo()" class="flex flex-col items-center focus:outline-none transition group" style="color: var(--accent);">
         <i class="fa-solid fa-compass text-base group-hover:scale-105 transition-transform"></i>
         <span class="text-[9px] mt-1 font-semibold tracking-wider uppercase font-title">Catálogo</span>
+      </button>
+
+      <button id="nav-chat" onclick="abrirChat()" class="relative flex flex-col items-center focus:outline-none transition group" style="color: var(--text-muted);">
+        <i class="fa-solid fa-comments text-base group-hover:scale-105 transition-transform"></i>
+        <span id="nav-chat-dot" class="hidden absolute top-0 right-1 w-2.5 h-2.5 rounded-full" style="background:#ef4444;box-shadow:0 0 6px #ef4444;"></span>
+        <span class="text-[9px] mt-1 font-semibold tracking-wider uppercase font-title">Chat</span>
       </button>
 
       <button id="btn-user" onclick="abrirPerfil()" class="hidden flex flex-col items-center focus:outline-none transition group" style="color: var(--accent);">
@@ -1589,8 +1582,8 @@ const seoCount = seoRevs.length;
           <button onclick="fecharChat()" class="w-8 h-8 rounded-full flex items-center justify-center transition active:scale-90" style="color:var(--text-secondary);">
             <i class="fa-solid fa-arrow-left text-sm"></i>
           </button>
-          <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style="background: linear-gradient(135deg, var(--accent), #a855f7);">
-            <i class="fa-solid fa-comments"></i>
+          <div class="w-10 h-10 rounded-full overflow-hidden shrink-0" style="border:1px solid var(--border);">
+            <img src="https://images.stockcake.com/public/e/c/c/ecc80ba1-9082-40cc-86a2-486ad8b93846/earth-from-space-stockcake.jpg" class="w-full h-full object-cover" alt="Chat global">
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-bold truncate" style="color:var(--text-primary);">Chat global</p>
@@ -3628,7 +3621,12 @@ const seoCount = seoRevs.length;
       chatAberto = true;
       carregarChat();
       clearInterval(chatTimer);
-      chatTimer = setInterval(() => { if (chatAberto) carregarChat(true); }, 4000);
+      // Push (SSE) atualiza na hora; o intervalo abaixo é só fallback
+      chatTimer = setInterval(() => {
+        if (!chatAberto || document.hidden) return;
+        if (chatSource && chatSource.readyState === 1) return;
+        carregarChat(true);
+      }, 15000);
       // Viu: limpa o pontinho na hora
       const latest = chatUltimoId;
       if (latest) setChatLastSeen(latest);
@@ -3729,15 +3727,9 @@ const seoCount = seoRevs.length;
     }
 
     function atualizarChatDot(temNovas, qtd) {
-      document.getElementById('nav-feed-dot')?.classList.toggle('hidden', !temNovas);
-      document.getElementById('chat-row-dot')?.classList.toggle('hidden', !temNovas);
-      const badge = document.getElementById('chat-row-new');
-      if (badge) {
-        badge.classList.toggle('hidden', !temNovas);
-        if (temNovas) badge.textContent = qtd > 1 ? qtd + ' novas' : 'nova';
-      }
-      const sub = document.getElementById('chat-row-sub');
-      if (sub && !temNovas) sub.textContent = 'Converse, mande prints e links';
+      document.getElementById('nav-chat-dot')?.classList.toggle('hidden', !temNovas);
+      const btn = document.getElementById('nav-chat');
+      if (btn) btn.title = temNovas ? (qtd > 1 ? qtd + ' mensagens novas no chat' : '1 mensagem nova no chat') : 'Chat global';
     }
 
     async function chatDotPoll() {
@@ -3756,17 +3748,12 @@ const seoCount = seoRevs.length;
         if (!res.ok) return;
         const data = await res.json();
         if (data.hasNew) {
-          // Conta quantas são novas para o selo
+          // Conta quantas são novas para o título do botão
           const r2 = await fetch('/api/chat?limit=100');
           if (!r2.ok) return;
           const msgs = await r2.json();
           const novas = msgs.filter(m => m.createdAt > seen);
-          atualizarChatDot(true, novas.length);
-          const sub = document.getElementById('chat-row-sub');
-          if (sub && novas.length) {
-            const ultima = novas[novas.length - 1];
-            sub.textContent = ultima.username + ': ' + (ultima.text || '[imagem]').slice(0, 60);
-          }
+          atualizarChatDot(novas.length > 0, novas.length);
         } else {
           atualizarChatDot(false, 0);
         }
@@ -3777,6 +3764,36 @@ const seoCount = seoRevs.length;
       clearInterval(chatDotTimer);
       chatDotTimer = setInterval(chatDotPoll, 20000);
       setTimeout(chatDotPoll, 3000);
+      // Ao voltar para a aba, atualiza na hora (chat aberto ou pontinho)
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        if (chatAberto) carregarChat(true);
+        else chatDotPoll();
+      });
+    }
+
+    // Push em tempo real: o servidor avisa quando chega mensagem nova
+    let chatSource = null;
+    function iniciarChatStream() {
+      try {
+        if (typeof EventSource === 'undefined') return;
+        chatSource = new EventSource('/api/chat/stream');
+        chatSource.onmessage = (ev) => {
+          try {
+            const data = JSON.parse(ev.data);
+            if (data.type === 'message') {
+              if (chatAberto) carregarChat(true);
+              else {
+                const seen = getChatLastSeen();
+                if (!seen || data.message.createdAt > seen) atualizarChatDot(true, 1);
+              }
+            } else if (data.type === 'deleted') {
+              if (chatAberto) carregarChat(true);
+            }
+          } catch {}
+        };
+        chatSource.onerror = () => { /* reconecta sozinho; fallback cobre */ };
+      } catch {}
     }
 
     // ── CRIADORES (ADMIN) ──
@@ -5325,6 +5342,7 @@ const seoCount = seoRevs.length;
     verificarSessao();
     iniciarHero();
     iniciarChatDot();
+    iniciarChatStream();
   </script>
 </body>
 </html>

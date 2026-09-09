@@ -633,6 +633,33 @@ router.delete('/replies/:id', async (req: Request, res: Response) => {
 })
 
 // ── CHAT GLOBAL ──
+const chatStreamClients = new Set<Response>()
+
+function broadcastChat(payload: unknown) {
+  const data = `data: ${JSON.stringify(payload)}\n\n`
+  for (const client of [...chatStreamClients]) {
+    try { client.write(data) } catch { chatStreamClients.delete(client) }
+  }
+}
+
+router.get('/chat/stream', (req: Request, res: Response) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  })
+  res.write(': connected\n\n')
+  chatStreamClients.add(res)
+  const hb = setInterval(() => {
+    try { res.write(': ping\n\n') } catch { /* cai no close */ }
+  }, 25000)
+  req.on('close', () => {
+    clearInterval(hb)
+    chatStreamClients.delete(res)
+  })
+})
+
 router.get('/chat', async (req: Request, res: Response) => {
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100)
   res.json(await getChatMessages(limit))
@@ -660,6 +687,7 @@ router.post('/chat', (req: Request, res: Response) => {
         catch { res.status(500).json({ error: 'Erro ao enviar a imagem.' }); return }
       }
       const msg = await addChatMessage({ username: user.username, text, image: imageUrl })
+      broadcastChat({ type: 'message', message: msg })
       res.status(201).json(msg)
     })
   })
@@ -672,6 +700,7 @@ router.delete('/chat/:id', async (req: Request, res: Response) => {
   if (!user) { res.status(401).json({ error: 'Sessão inválida.' }); return }
   const ok = await deleteChatMessage(String(req.params.id), user.username, user.role === 'admin')
   if (!ok) { res.status(403).json({ error: 'Sem permissão ou mensagem não encontrada.' }); return }
+  broadcastChat({ type: 'deleted', id: String(req.params.id) })
   res.json({ message: 'Mensagem excluída.' })
 })
 
