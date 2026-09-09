@@ -34,6 +34,8 @@ export interface Review {
   createdAt: string
   status: 'pending' | 'approved' | 'rejected'
   customImage?: string
+  likes: string[]
+  dislikes: string[]
 }
 
 export interface ReviewInput {
@@ -66,13 +68,23 @@ export interface ReviewReply {
 export interface EventPost {
   id: string
   username: string
-  rpg: RPG
+  rpg: RPG | null
   title: string
   content: string
   image?: string
+  tags?: string[]
   timeAgo: string
   createdAt: string
   rpgScore?: number
   boosted?: boolean
   boostHours?: number
+}
+
+export interface ChatMessage {
+  id: string
+  username: string
+  text: string
+  image?: string
+  timeAgo: string
+  createdAt: string
 }

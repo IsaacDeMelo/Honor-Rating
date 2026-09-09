@@ -419,11 +419,23 @@ const seoCount = seoRevs.length;
 
     <!-- FEED DE AVALIAÇÕES -->
     <main id="feed-container" class="flex-1 p-4 lg:p-6 space-y-4 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4 xl:grid-cols-3 overflow-y-auto">
+      <button onclick="abrirChat()" class="feed-card rounded-2xl p-3 border flex items-center gap-3 text-left transition active:scale-[0.99] lg:col-span-2 xl:col-span-3" style="background: color-mix(in srgb, var(--accent) 8%, transparent); border-color: color-mix(in srgb, var(--accent) 30%, transparent);">
+        <span class="relative w-10 h-10 rounded-full flex items-center justify-center text-sm text-white shrink-0" style="background: linear-gradient(135deg, var(--accent), #a855f7);">
+          <i class="fa-solid fa-comments"></i>
+          <span id="chat-row-dot" class="hidden absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style="background:#ef4444;border-color:var(--bg-card);box-shadow:0 0 6px #ef4444;"></span>
+        </span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-xs font-bold" style="color:var(--text-primary);">Chat global da comunidade</span>
+          <span class="block text-[10px] truncate" id="chat-row-sub" style="color:var(--text-muted);">Converse, mande prints e links</span>
+        </span>
+        <span id="chat-row-new" class="hidden text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#ef4444;color:#fff;"></span>
+        <i class="fa-solid fa-chevron-right text-[10px] shrink-0" style="color:var(--text-muted);"></i>
+      </button>
       
       <% eventPosts.forEach(post => { %>
-      <div class="feed-card feed-event-card rounded-2xl p-4.5 border transition-all duration-300 shadow-sm flex flex-col space-y-3.5" data-rpg="<%= post.rpg.name %>" style="background: color-mix(in srgb, #22c55e 6%, var(--bg-card) 40%, transparent); border-color: color-mix(in srgb, #22c55e 30%, var(--border));">
+      <div class="feed-card feed-event-card rounded-2xl p-4.5 border transition-all duration-300 shadow-sm flex flex-col space-y-3.5" data-rpg="<%= post.rpg ? post.rpg.name : '' %>" style="background: color-mix(in srgb, #22c55e 6%, var(--bg-card) 40%, transparent); border-color: color-mix(in srgb, #22c55e 30%, var(--border));">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase shrink-0" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;"><i class="fa-solid fa-bullhorn text-[8px] mr-1"></i>Evento do Criador</span>
+          <span class="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase shrink-0" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;"><i class="fa-solid fa-bullhorn text-[8px] mr-1"></i><%= post.rpg ? 'Evento do Criador' : 'Comunicado' %></span>
           <% if (post.boosted) { %>
           <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;" title="Quanto mais avaliações boas o sistema tem, mais tempo este post fica no topo."><i class="fa-solid fa-rocket text-[8px] mr-1"></i>Em alta · <%= Math.round(post.boostHours) %>h</span>
           <% } else { %>
@@ -431,6 +443,7 @@ const seoCount = seoRevs.length;
           <% } %>
           <span class="text-[9px]" style="color: var(--text-muted);"><%= post.timeAgo %></span>
         </div>
+        <% if (post.rpg) { %>
         <div class="flex items-center space-x-3 p-2.5 rounded-xl border" style="background: color-mix(in srgb, var(--bg-elevated) 40%, transparent); border-color: var(--border);">
           <img src="<%= post.rpg.image %>" class="w-12 h-14 object-cover rounded-lg shadow-md" alt="Capa <%= post.rpg.name %>">
           <div class="flex-1 min-w-0">
@@ -439,8 +452,19 @@ const seoCount = seoRevs.length;
             <p class="text-[10px] truncate" style="color: var(--text-muted);">Por: <span class="rpg-owner"><%= post.rpg.owner %></span></p>
           </div>
         </div>
+        <% } %>
         <h4 class="text-sm font-bold" style="color: var(--text-primary);"><%= post.title %></h4>
+        <% if (post.image) { %>
+        <a href="<%= post.image %>" target="_blank" rel="noopener"><img src="<%= post.image %>" class="w-full max-h-64 object-cover rounded-xl border" style="border-color:var(--border);" loading="lazy" alt=""></a>
+        <% } %>
         <p class="text-xs leading-relaxed pl-1" style="color: var(--text-secondary);"><%= post.content %></p>
+        <% if (post.tags && post.tags.length) { %>
+        <div class="flex flex-wrap gap-1 pl-1">
+          <% post.tags.forEach(t => { %>
+          <span class="text-[9px] px-2 py-0.5 rounded-full font-medium" style="background:color-mix(in srgb, #22c55e 12%, transparent);color:#22c55e;border:1px solid color-mix(in srgb, #22c55e 25%, transparent);">#<%= t %></span>
+          <% }) %>
+        </div>
+        <% } %>
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-semibold flex items-center gap-1" style="color: #22c55e;">
             <i class="fa-solid fa-award"></i> <%= post.username %>
@@ -524,8 +548,9 @@ const seoCount = seoRevs.length;
     <!-- NAVBAR INFERIOR -->
     <nav style="border-color: var(--border);" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md lg:max-w-5xl border-t px-6 py-4 flex justify-between items-center z-50 glassmorphism rounded-t-2xl">
       
-      <button id="nav-feed" onclick="abrirFeed()" class="flex flex-col items-center focus:outline-none transition group" style="color: var(--text-muted);">
+      <button id="nav-feed" onclick="abrirFeed()" class="relative flex flex-col items-center focus:outline-none transition group" style="color: var(--text-muted);">
         <i class="fa-solid fa-comment-dots text-base group-hover:scale-105 transition-transform"></i>
+        <span id="nav-feed-dot" class="hidden absolute top-0 right-1 w-2.5 h-2.5 rounded-full" style="background:#ef4444;box-shadow:0 0 6px #ef4444;"></span>
         <span class="text-[9px] mt-1 font-semibold tracking-wider uppercase font-title">Feed</span>
       </button>
 
@@ -1557,6 +1582,41 @@ const seoCount = seoRevs.length;
       </div>
     </div>
 
+    <!-- MODAL CHAT GLOBAL -->
+    <div id="modal-chat" class="modal-hidden fixed inset-0 z-50 flex justify-center" style="background: color-mix(in srgb, var(--bg-primary) 94%, transparent);">
+      <div class="w-full max-w-md h-full flex flex-col shadow-2xl" style="background: var(--bg-primary);">
+        <div class="flex items-center gap-3 px-4 py-3 shrink-0" style="background: var(--bg-elevated); border-bottom: 1px solid var(--border);">
+          <button onclick="fecharChat()" class="w-8 h-8 rounded-full flex items-center justify-center transition active:scale-90" style="color:var(--text-secondary);">
+            <i class="fa-solid fa-arrow-left text-sm"></i>
+          </button>
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style="background: linear-gradient(135deg, var(--accent), #a855f7);">
+            <i class="fa-solid fa-comments"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold truncate" style="color:var(--text-primary);">Chat global</p>
+            <p class="text-[10px] truncate" id="chat-subtitulo" style="color:var(--text-muted);">da comunidade Honor Rating</p>
+          </div>
+          <button onclick="carregarChat()" class="w-8 h-8 rounded-full flex items-center justify-center transition active:scale-90" style="color:var(--text-muted);" title="Recarregar">
+            <i class="fa-solid fa-rotate-right text-xs"></i>
+          </button>
+        </div>
+        <div id="chat-mensagens" class="flex-1 overflow-y-auto px-3 py-4 space-y-2" style="background: color-mix(in srgb, var(--bg-card) 50%, transparent);">
+          <p class="text-[11px] text-center py-8" style="color:var(--text-muted);">Carregando conversa...</p>
+        </div>
+        <div id="chat-preview" class="hidden px-4 pt-2 shrink-0" style="background: var(--bg-elevated);"></div>
+        <div class="flex items-end gap-2 px-3 py-3 shrink-0" style="background: var(--bg-elevated); border-top: 1px solid var(--border);">
+          <label for="chat-image" class="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 shrink-0" style="background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--border);" title="Anexar imagem">
+            <i class="fa-solid fa-plus text-sm"></i>
+          </label>
+          <input id="chat-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" onchange="chatImagePreview(this)">
+          <input id="chat-text" type="text" maxlength="1000" placeholder="Conversar..." autocomplete="off" class="flex-1 rounded-full px-4 py-2.5 text-sm focus:outline-none" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);" onkeydown="if(event.key==='Enter')enviarChatMsg()">
+          <button onclick="enviarChatMsg()" id="chat-send-btn" class="w-10 h-10 rounded-full flex items-center justify-center text-white transition active:scale-90 shrink-0" style="background: var(--accent);" title="Enviar">
+            <i class="fa-solid fa-paper-plane text-sm"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL DE POSTAR EVENTO -->
     <div id="modal-postar-evento" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: color-mix(in srgb, var(--bg-primary) 90%, transparent);">
       <div class="rounded-3xl w-full max-w-md shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border);">
@@ -1582,6 +1642,19 @@ const seoCount = seoRevs.length;
           <div>
             <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Descrição do evento *</label>
             <textarea id="event-content" rows="4" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none resize-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Conte sobre o evento..."></textarea>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Imagem (opcional)</label>
+            <label for="event-image" class="flex items-center justify-center gap-2 w-full rounded-xl py-2.5 text-[11px] font-bold cursor-pointer transition active:scale-[0.98]" style="background:var(--bg-input);border:1px dashed var(--border);color:var(--text-secondary);">
+              <i class="fa-solid fa-image"></i>
+              <span id="event-image-label">Anexar imagem</span>
+            </label>
+            <input id="event-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" onchange="eventImagePreview(this)">
+            <div id="event-image-preview" class="hidden mt-2"></div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold mb-1" style="color: var(--text-secondary);">Tags (opcional, separadas por vírgula)</label>
+            <input id="event-tags" type="text" maxlength="200" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" placeholder="Ex: inscrições, torneio, live">
           </div>
           <p id="event-error" class="hidden text-[10px] font-bold" style="color: #ef4444;"></p>
           <button onclick="publicarEvento()" class="w-full text-white font-bold py-2.5 rounded-xl text-xs transition-all active:scale-[0.97]" style="background: var(--accent);">
@@ -2238,6 +2311,34 @@ const seoCount = seoRevs.length;
       abrirDetalheRpg(nome);
     }
 
+    function reviewScore(r) {
+      return ((r.likes || []).length - (r.dislikes || []).length);
+    }
+
+    function meuVoto(r) {
+      const user = getUser();
+      if (!user) return null;
+      if ((r.likes || []).includes(user.username)) return 'like';
+      if ((r.dislikes || []).includes(user.username)) return 'dislike';
+      return null;
+    }
+
+    async function votarReview(id, voto) {
+      const user = getUser();
+      if (!user) { abrirModalLogin(); return; }
+      try {
+        const res = await fetch(`/api/reviews/${id}/${voto}`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        if (!res.ok) return;
+        const updated = await res.json();
+        allReviewData = allReviewData.map(r => r.id === id ? updated : r);
+        const list = document.getElementById('detalhe-reviews-list');
+        if (list && modalRpgAtual) renderReviewsNoDetalhe(modalRpgAtual, list);
+      } catch {}
+    }
+
     function renderReviewsNoDetalheList(revs, list) {
       if (revs.length) {
         list.innerHTML = revs.map(r => {
@@ -2246,6 +2347,9 @@ const seoCount = seoRevs.length;
           const initial = r.username.charAt(0).toUpperCase();
           const rpgName = r.rpg.name;
           const podeResponder = isCreatorOfUser(rpgName);
+          const likes = (r.likes || []).length;
+          const dislikes = (r.dislikes || []).length;
+          const voto = meuVoto(r);
           return `
           <div class="detalhe-review-card rounded-xl p-3 border" style="background:color-mix(in srgb, var(--bg-card) 50%, transparent);border-color:var(--border);">
             <div class="flex items-center gap-2 mb-1">
@@ -2258,7 +2362,11 @@ const seoCount = seoRevs.length;
             <p class="text-[11px] leading-relaxed" style="color:var(--text-muted);">${r.comment.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
             <div class="flex items-center gap-2 mt-1.5">
               <span class="text-[9px]" style="color:var(--text-muted);">${r.timeAgo}</span>
-              ${podeResponder ? `<button onclick="abrirModalResponderReview('${r.id}', '${r.username.replace(/'/g, "\\'")}', '${r.comment.replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 80)}')" class="text-[9px] px-2 py-1 rounded-lg font-bold transition-all active:scale-[0.94] inline-flex items-center gap-1 ml-auto" style="color:#22c55e;background:color-mix(in srgb, #22c55e 10%, transparent);border:1px solid color-mix(in srgb, #22c55e 25%, transparent);"><i class="fa-solid fa-reply"></i> Responder</button>` : ''}
+              <span class="inline-flex items-center gap-1 ml-auto">
+                <button onclick="votarReview('${r.id}', 'like')" title="Curtir" class="text-[10px] px-2 py-1 rounded-lg font-bold transition-all active:scale-90 inline-flex items-center gap-1" style="color:${voto === 'like' ? '#22c55e' : 'var(--text-muted)'};background:${voto === 'like' ? 'color-mix(in srgb, #22c55e 15%, transparent)' : 'transparent'};border:1px solid ${voto === 'like' ? 'color-mix(in srgb, #22c55e 40%, transparent)' : 'var(--border)'};"><i class="fa-solid fa-thumbs-up"></i>${likes || ''}</button>
+                <button onclick="votarReview('${r.id}', 'dislike')" title="Não curtir" class="text-[10px] px-2 py-1 rounded-lg font-bold transition-all active:scale-90 inline-flex items-center gap-1" style="color:${voto === 'dislike' ? '#ef4444' : 'var(--text-muted)'};background:${voto === 'dislike' ? 'color-mix(in srgb, #ef4444 15%, transparent)' : 'transparent'};border:1px solid ${voto === 'dislike' ? 'color-mix(in srgb, #ef4444 40%, transparent)' : 'var(--border)'};"><i class="fa-solid fa-thumbs-down"></i>${dislikes || ''}</button>
+              </span>
+              ${podeResponder ? `<button onclick="abrirModalResponderReview('${r.id}', '${r.username.replace(/'/g, "\\'")}', '${r.comment.replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 80)}')" class="text-[9px] px-2 py-1 rounded-lg font-bold transition-all active:scale-[0.94] inline-flex items-center gap-1" style="color:#22c55e;background:color-mix(in srgb, #22c55e 10%, transparent);border:1px solid color-mix(in srgb, #22c55e 25%, transparent);"><i class="fa-solid fa-reply"></i> Responder</button>` : ''}
             </div>
             <div class="review-replies-box hidden mt-2 space-y-2" data-reviews-list="${r.id}"></div>
           </div>`;
@@ -2269,12 +2377,18 @@ const seoCount = seoRevs.length;
         });
         atualizarFeedSelo();
       } else {
-        list.innerHTML = '<p class="text-xs text-center py-4" style="color:var(--text-muted);">Nenhuma crítica ainda. Seja o primeiro a avaliar!</p>';
+        list.innerHTML = '<p class="text-xs text-center py-4" style="color: var(--text-muted);">Nenhuma crítica ainda. Seja o primeiro a avaliar!</p>';
       }
     }
 
     function renderReviewsNoDetalhe(nome, list) {
-      const revs = allReviewData.filter(r => r.rpg.name === nome);
+      const revs = allReviewData
+        .filter(r => r.rpg.name === nome)
+        .sort((a, b) => {
+          const d = reviewScore(b) - reviewScore(a);
+          if (d !== 0) return d;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
       renderReviewsNoDetalheList(revs, list);
     }
 
@@ -3468,6 +3582,203 @@ const seoCount = seoRevs.length;
       } catch {}
     }
 
+    // ── CHAT GLOBAL ──
+    let chatAberto = false;
+    let chatTimer = null;
+    let chatDotTimer = null;
+    let chatUltimoId = null;
+
+    function chatSeenKey() {
+      const user = getUser();
+      return 'honor-chat-seen-' + (user ? user.username : 'anon');
+    }
+
+    function getChatLastSeen() {
+      return localStorage.getItem(chatSeenKey()) || null;
+    }
+
+    function setChatLastSeen(iso) {
+      localStorage.setItem(chatSeenKey(), iso || new Date().toISOString());
+    }
+
+    function corDoUsuario(nome) {
+      let h = 0;
+      for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) % 360;
+      return `hsl(${h}, 70%, 60%)`;
+    }
+
+    function escaparHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Formatação estilo WhatsApp: *negrito* _itálico_ ~riscado~ `código` + links
+    function formatChatText(s) {
+      let h = escaparHtml(s);
+      h = h.replace(/```([\s\S]+?)```/g, '<code style="background:rgba(0,0,0,.35);padding:1px 5px;border-radius:6px;font-size:11px;">$1</code>');
+      h = h.replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+      h = h.replace(/(^|\W)_([^_\n]+)_/g, '$1<i>$2</i>');
+      h = h.replace(/~([^~\n]+)~/g, '<s>$1</s>');
+      h = h.replace(/`([^`\n]+)`/g, '<code style="background:rgba(0,0,0,.35);padding:1px 5px;border-radius:6px;font-size:11px;">$1</code>');
+      h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline" style="color:#7dd3fc;">$1</a>');
+      return h.replace(/\n/g, '<br>');
+    }
+
+    function abrirChat() {
+      document.getElementById('modal-chat').classList.remove('modal-hidden');
+      chatAberto = true;
+      carregarChat();
+      clearInterval(chatTimer);
+      chatTimer = setInterval(() => { if (chatAberto) carregarChat(true); }, 4000);
+      // Viu: limpa o pontinho na hora
+      const latest = chatUltimoId;
+      if (latest) setChatLastSeen(latest);
+      atualizarChatDot(false, 0);
+    }
+
+    function fecharChat() {
+      document.getElementById('modal-chat').classList.add('modal-hidden');
+      chatAberto = false;
+      clearInterval(chatTimer);
+    }
+
+    async function carregarChat(silencioso) {
+      const box = document.getElementById('chat-mensagens');
+      try {
+        const res = await fetch('/api/chat?limit=50');
+        if (!res.ok) throw 0;
+        const msgs = await res.json();
+        const eu = getUser()?.username;
+        if (!msgs.length) {
+          box.innerHTML = '<p class="text-[11px] text-center py-8" style="color:var(--text-muted);">Nenhuma mensagem ainda. Puxe assunto!</p>';
+          return;
+        }
+        const pertoDoFim = (box.scrollHeight - box.scrollTop - box.clientHeight) < 120;
+        box.innerHTML = msgs.map(m => {
+          const minha = eu && m.username === eu;
+          const u = catUsersData.find(x => x.username === m.username);
+          const avatar = u?.avatar;
+          const initial = m.username.charAt(0).toUpperCase();
+          const hora = new Date(m.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+          return `
+          <div class="flex ${minha ? 'justify-end' : 'justify-start'}">
+            <div class="max-w-[80%] rounded-2xl px-3 py-2 shadow-sm ${minha ? 'rounded-br-md' : 'rounded-bl-md'}" style="background:${minha ? 'var(--accent)' : 'var(--bg-elevated)'};border:1px solid var(--border);">
+              ${minha ? '' : `<div class="flex items-center gap-1.5 mb-1">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold overflow-hidden shrink-0" style="background:${corDoUsuario(m.username)};color:#fff;">${avatar ? `<img src="${avatar}" class="w-full h-full object-cover">` : initial}</div>
+                <span class="text-[10px] font-bold" style="color:${corDoUsuario(m.username)};">${m.username.replace(/</g, '&lt;')}</span>
+              </div>`}
+              ${m.image ? `<a href="${m.image}" target="_blank" rel="noopener"><img src="${m.image}" class="rounded-xl mb-1 w-full max-h-52 object-cover" loading="lazy" alt=""></a>` : ''}
+              ${m.text ? `<p class="text-[12px] leading-relaxed break-words" style="color:${minha ? '#fff' : 'var(--text-primary)'};">${formatChatText(m.text)}</p>` : ''}
+              <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                <span class="text-[8px]" style="color:${minha ? 'rgba(255,255,255,.7)' : 'var(--text-muted)'};">${hora}</span>
+                ${minha || getUser()?.role === 'admin' ? `<button onclick="deletarChatMsg('${m.id}')" class="text-[8px] opacity-60 hover:opacity-100" style="color:${minha ? '#fff' : 'var(--text-muted)'};" title="Apagar"><i class="fa-solid fa-trash"></i></button>` : ''}
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+        chatUltimoId = msgs[msgs.length - 1].createdAt;
+        document.getElementById('chat-subtitulo').textContent = msgs.length + ' mensagens · da comunidade Honor Rating';
+        if (!silencioso || pertoDoFim) box.scrollTop = box.scrollHeight;
+        if (chatAberto) { setChatLastSeen(chatUltimoId); atualizarChatDot(false, 0); }
+      } catch {
+        if (!silencioso) box.innerHTML = '<p class="text-[11px] text-center py-8" style="color:var(--text-muted);">Erro ao carregar. Tente de novo.</p>';
+      }
+    }
+
+    function chatImagePreview(input) {
+      const box = document.getElementById('chat-preview');
+      const f = input.files?.[0];
+      if (!f) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+      box.innerHTML = `<div class="relative inline-block mb-2">
+        <img src="${URL.createObjectURL(f)}" class="h-20 rounded-xl border" style="border-color:var(--border);">
+        <button onclick="document.getElementById('chat-image').value='';chatImagePreview(document.getElementById('chat-image'))" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-bold" style="background:#ef4444;color:#fff;">×</button>
+      </div>`;
+      box.classList.remove('hidden');
+    }
+
+    async function enviarChatMsg() {
+      const user = getUser();
+      if (!user) { fecharChat(); abrirModalLogin(); return; }
+      const input = document.getElementById('chat-text');
+      const fileInput = document.getElementById('chat-image');
+      const text = input.value.trim();
+      const file = fileInput.files?.[0];
+      if (!text && !file) return;
+      const btn = document.getElementById('chat-send-btn');
+      btn.style.opacity = '.5';
+      try {
+        const form = new FormData();
+        if (text) form.append('text', text);
+        if (file) form.append('image', file);
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() }, body: form });
+        if (!res.ok) return;
+        input.value = '';
+        fileInput.value = '';
+        document.getElementById('chat-preview').classList.add('hidden');
+        document.getElementById('chat-preview').innerHTML = '';
+        await carregarChat();
+      } catch {}
+      finally { btn.style.opacity = '1'; }
+    }
+
+    async function deletarChatMsg(id) {
+      if (!confirm('Apagar esta mensagem?')) return;
+      try {
+        const res = await fetch('/api/chat/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + getToken() } });
+        if (res.ok) carregarChat(true);
+      } catch {}
+    }
+
+    function atualizarChatDot(temNovas, qtd) {
+      document.getElementById('nav-feed-dot')?.classList.toggle('hidden', !temNovas);
+      document.getElementById('chat-row-dot')?.classList.toggle('hidden', !temNovas);
+      const badge = document.getElementById('chat-row-new');
+      if (badge) {
+        badge.classList.toggle('hidden', !temNovas);
+        if (temNovas) badge.textContent = qtd > 1 ? qtd + ' novas' : 'nova';
+      }
+      const sub = document.getElementById('chat-row-sub');
+      if (sub && !temNovas) sub.textContent = 'Converse, mande prints e links';
+    }
+
+    async function chatDotPoll() {
+      if (chatAberto || document.hidden) return;
+      try {
+        const seen = getChatLastSeen();
+        // Primeira vez: marca a base sem acender (não brilha à toa)
+        if (!seen) {
+          const r0 = await fetch('/api/chat/ping');
+          if (!r0.ok) return;
+          const d0 = await r0.json();
+          if (d0.latest) setChatLastSeen(d0.latest);
+          return;
+        }
+        const res = await fetch('/api/chat/ping?since=' + encodeURIComponent(seen));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.hasNew) {
+          // Conta quantas são novas para o selo
+          const r2 = await fetch('/api/chat?limit=100');
+          if (!r2.ok) return;
+          const msgs = await r2.json();
+          const novas = msgs.filter(m => m.createdAt > seen);
+          atualizarChatDot(true, novas.length);
+          const sub = document.getElementById('chat-row-sub');
+          if (sub && novas.length) {
+            const ultima = novas[novas.length - 1];
+            sub.textContent = ultima.username + ': ' + (ultima.text || '[imagem]').slice(0, 60);
+          }
+        } else {
+          atualizarChatDot(false, 0);
+        }
+      } catch {}
+    }
+
+    function iniciarChatDot() {
+      clearInterval(chatDotTimer);
+      chatDotTimer = setInterval(chatDotPoll, 20000);
+      setTimeout(chatDotPoll, 3000);
+    }
+
     // ── CRIADORES (ADMIN) ──
     function abrirModalCriadores() {
       const modal = document.getElementById('modal-criadores');
@@ -3597,7 +3908,8 @@ const seoCount = seoRevs.length;
       if (btn) {
         const user = getUser();
         const u = user ? catUsersData.find(x => x.username === user.username) : null;
-        btn.classList.toggle('hidden', !(u && (u.creatorOf || []).length > 0));
+        const pode = user && (user.role === 'admin' || (u && (u.creatorOf || []).length > 0));
+        btn.classList.toggle('hidden', !pode);
       }
     }
 
@@ -4557,15 +4869,35 @@ const seoCount = seoRevs.length;
       const user = getUser();
       if (!user) { abrirModalLogin(); return; }
       const u = catUsersData.find(x => x.username === user.username);
+      const isAdmin = user.role === 'admin';
       const meusRpgs = (u?.creatorOf || []).filter(rn => catRpgData.some(r => r.name === rn));
-      if (!meusRpgs.length) { alert('Você não é criador de nenhum sistema.'); return; }
+      const todosRpgs = catRpgData.map(r => r.name);
+      const opcoes = isAdmin ? todosRpgs : meusRpgs;
+      if (!opcoes.length) { alert('Você não é criador de nenhum sistema.'); return; }
       const select = document.getElementById('event-rpg-select');
-      select.innerHTML = meusRpgs.map(rn => `<option value="${rn.replace(/"/g, '&quot;')}">${rn}</option>`).join('');
-      if (preRpg && meusRpgs.includes(preRpg)) select.value = preRpg;
+      select.innerHTML = (isAdmin ? `<option value="__geral__">Comunicado geral (sem RPG)</option>` : '')
+        + opcoes.map(rn => `<option value="${rn.replace(/"/g, '&quot;')}">${rn}</option>`).join('');
+      if (preRpg && opcoes.includes(preRpg)) select.value = preRpg;
       document.getElementById('event-title').value = '';
       document.getElementById('event-content').value = '';
+      document.getElementById('event-tags').value = '';
+      const fi = document.getElementById('event-image');
+      if (fi) fi.value = '';
+      document.getElementById('event-image-label').textContent = 'Anexar imagem';
+      document.getElementById('event-image-preview').classList.add('hidden');
+      document.getElementById('event-image-preview').innerHTML = '';
       document.getElementById('event-error').classList.add('hidden');
       document.getElementById('modal-postar-evento').classList.remove('modal-hidden');
+    }
+
+    function eventImagePreview(input) {
+      const box = document.getElementById('event-image-preview');
+      const label = document.getElementById('event-image-label');
+      const f = input.files?.[0];
+      if (!f) { box.classList.add('hidden'); box.innerHTML = ''; label.textContent = 'Anexar imagem'; return; }
+      label.textContent = f.name.slice(0, 24);
+      box.innerHTML = `<img src="${URL.createObjectURL(f)}" class="w-full max-h-44 object-cover rounded-xl border" style="border-color:var(--border);">`;
+      box.classList.remove('hidden');
     }
 
     function fecharModalPostarEvento() {
@@ -4578,19 +4910,27 @@ const seoCount = seoRevs.length;
       const rpgName = document.getElementById('event-rpg-select').value;
       const title = document.getElementById('event-title').value.trim();
       const content = document.getElementById('event-content').value.trim();
-      if (!rpgName || !title || !content) { errEl.textContent = 'Preencha todos os campos.'; errEl.classList.remove('hidden'); return; }
+      const tags = document.getElementById('event-tags').value.trim();
+      if (!title || !content) { errEl.textContent = 'Preencha título e descrição.'; errEl.classList.remove('hidden'); return; }
+      const btn = document.querySelector('#modal-postar-evento button[onclick="publicarEvento()"]');
+      if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
       try {
-        const res = await fetch('/api/posts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-          body: JSON.stringify({ rpgName, title, content })
-        });
+        const form = new FormData();
+        if (rpgName && rpgName !== '__geral__') form.append('rpgName', rpgName);
+        form.append('title', title);
+        form.append('content', content);
+        if (tags) form.append('tags', tags);
+        const imgFile = document.getElementById('event-image').files?.[0];
+        if (imgFile) form.append('image', imgFile);
+        const headers = { 'Authorization': 'Bearer ' + getToken() };
+        const res = await fetch('/api/posts', { method: 'POST', headers, body: form });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Erro ao publicar.'; errEl.classList.remove('hidden'); return; }
         fecharModalPostarEvento();
         await refreshPosts();
         abrirFeed();
       } catch { errEl.textContent = 'Erro de conexão.'; errEl.classList.remove('hidden'); }
+      finally { if (btn) { btn.disabled = false; btn.style.opacity = '1'; } }
     }
 
     async function deletarEvento(id, btn) {
@@ -4628,15 +4968,10 @@ const seoCount = seoRevs.length;
       div.className = 'feed-card feed-event-card rounded-2xl p-4.5 border transition-all duration-300 shadow-sm flex flex-col space-y-3.5';
       div.style.background = 'color-mix(in srgb, #22c55e 6%, var(--bg-card) 40%, transparent)';
       div.style.borderColor = 'color-mix(in srgb, #22c55e 30%, var(--border))';
-      div.setAttribute('data-rpg', p.rpg.name);
-      div.innerHTML = `
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase shrink-0" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;"><i class="fa-solid fa-bullhorn text-[8px] mr-1"></i>Evento do Criador</span>
-          ${p.boosted
-            ? `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;" title="Quanto mais avaliações boas o sistema tem, mais tempo este post fica no topo."><i class="fa-solid fa-rocket text-[8px] mr-1"></i>Em alta · ${Math.round(p.boostHours)}h</span>`
-            : `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);" title="O impulso deste post terminou e ele está caindo conforme o tempo."><i class="fa-solid fa-arrow-trend-down text-[8px] mr-1"></i>Caindo</span>`}
-          <span class="text-[9px]" style="color: var(--text-muted);">${p.timeAgo}</span>
-        </div>
+      div.setAttribute('data-rpg', p.rpg ? p.rpg.name : '');
+      const isGeral = !p.rpg;
+      const selo = isGeral ? 'Comunicado' : 'Evento do Criador';
+      const rpgBlock = p.rpg ? `
         <div class="flex items-center space-x-3 p-2.5 rounded-xl border" style="background: color-mix(in srgb, var(--bg-elevated) 40%, transparent); border-color: var(--border);">
           <img src="${p.rpg.image}" class="w-12 h-14 object-cover rounded-lg shadow-md" alt="">
           <div class="flex-1 min-w-0">
@@ -4644,9 +4979,21 @@ const seoCount = seoRevs.length;
             <h3 class="font-title font-bold text-sm truncate mt-0.5 cursor-pointer hover:underline" style="color: var(--text-primary);" onclick="abrirDetalheRpg('${p.rpg.name.replace(/'/g, "\\'")}')">${p.rpg.name}</h3>
             <p class="text-[10px] truncate" style="color: var(--text-muted);">Por: ${p.rpg.owner}</p>
           </div>
+        </div>` : '';
+      const tagsHtml = (p.tags && p.tags.length) ? `<div class="flex flex-wrap gap-1 pl-1">${p.tags.map(t => `<span class="text-[9px] px-2 py-0.5 rounded-full font-medium" style="background:color-mix(in srgb, #22c55e 12%, transparent);color:#22c55e;border:1px solid color-mix(in srgb, #22c55e 25%, transparent);">#${String(t).replace(/</g, '&lt;')}</span>`).join('')}</div>` : '';
+      div.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase shrink-0" style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;"><i class="fa-solid fa-bullhorn text-[8px] mr-1"></i>${selo}</span>
+          ${p.boosted
+            ? `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;" title="Quanto mais avaliações boas o sistema tem, mais tempo este post fica no topo."><i class="fa-solid fa-rocket text-[8px] mr-1"></i>Em alta · ${Math.round(p.boostHours)}h</span>`
+            : `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);" title="O impulso deste post terminou e ele está caindo conforme o tempo."><i class="fa-solid fa-arrow-trend-down text-[8px] mr-1"></i>Caindo</span>`}
+          <span class="text-[9px]" style="color: var(--text-muted);">${p.timeAgo}</span>
         </div>
+        ${rpgBlock}
         <h4 class="text-sm font-bold" style="color: var(--text-primary);">${p.title}</h4>
+        ${p.image ? `<a href="${p.image}" target="_blank" rel="noopener"><img src="${p.image}" class="w-full max-h-64 object-cover rounded-xl border" style="border-color:var(--border);" loading="lazy" alt=""></a>` : ''}
         <p class="text-xs leading-relaxed pl-1" style="color: var(--text-secondary);">${p.content}</p>
+        ${tagsHtml}
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-semibold flex items-center gap-1" style="color: #22c55e;"><i class="fa-solid fa-award"></i> ${p.username}</span>
           <button onclick="deletarEvento('${p.id}', this)" class="event-delete-btn text-[9px] px-2 py-1 rounded-lg font-bold transition-all hidden active:scale-[0.94]" style="color: #ef4444; background: color-mix(in srgb, #ef4444 10%, transparent); border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);" data-owner="${p.username}">
@@ -4971,11 +5318,13 @@ const seoCount = seoRevs.length;
         if (!document.getElementById('modal-denuncias').classList.contains('modal-hidden')) fecharModalDenuncias();
         if (!document.getElementById('modal-submeter-rpg').classList.contains('modal-hidden')) fecharModalSubmeterRpg();
         if (!document.getElementById('modal-submissoes').classList.contains('modal-hidden')) fecharModalSubmissoes();
+        if (!document.getElementById('modal-chat').classList.contains('modal-hidden')) fecharChat();
       }
     });
 
     verificarSessao();
     iniciarHero();
+    iniciarChatDot();
   </script>
 </body>
 </html>

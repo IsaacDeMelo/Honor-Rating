@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
 import { Readable } from 'stream'
-import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason, addRpgSubmission, getRpgSubmissions, getPendingSubmissionsCount, approveRpgSubmission, rejectRpgSubmission, cleanupOrphans } from '../data'
+import { getReviews, getRecentReviews, getPendingReviews, addReview, approveReview, rejectReview, deleteReviewById, toggleReviewVote, addRpg, updateRpg, deleteRpg, getRpgs, getRpgByName, getUserByToken, toggleFeaturedRpg, setFeaturedOrder, getRpgRatings, attachRpgs, recordVisit, getAnalyticsSummary, getAds, getAllAds, addAd, updateAd, deleteAd, setUserCreators, isCreatorOf, getEventPosts, getEventPostsPaginated, addEventPost, deleteEventPost, getReviewReplies, addReviewReply, deleteReviewReply, getCreatorStats, addReport, getReports, getPendingReportsCount, resolveReport, ReportReason, addRpgSubmission, getRpgSubmissions, getPendingSubmissionsCount, approveRpgSubmission, rejectRpgSubmission, cleanupOrphans, getChatMessages, getChatLatest, addChatMessage, deleteChatMessage } from '../data'
 import ReviewModel from '../models/Review'
 import UserModel from '../models/User'
 import { ReviewInput, RPG } from '../types'
@@ -162,6 +162,19 @@ router.delete('/reviews/:id', async (req: Request, res: Response) => {
   res.json({ message: 'Avaliação excluída.' })
 })
 
+async function votarReview(req: Request, res: Response, vote: 'like' | 'dislike') {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Faça login para votar.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user) { res.status(401).json({ error: 'Sessão inválida.' }); return }
+  const review = await toggleReviewVote(String(req.params.id), user.username, vote)
+  if (!review) { res.status(404).json({ error: 'Avaliação não encontrada.' }); return }
+  res.json(review)
+}
+
+router.post('/reviews/:id/like', async (req: Request, res: Response) => { votarReview(req, res, 'like') })
+router.post('/reviews/:id/dislike', async (req: Request, res: Response) => { votarReview(req, res, 'dislike') })
+
 function uploadRpgImage(buffer: Buffer, folder: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -236,6 +249,21 @@ router.post('/rpgs', async (req: Request, res: Response) => {
   })
 })
 
+router.patch('/rpgs/featured-order', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const token = authHeader.replace('Bearer ', '')
+  const user = await getUserByToken(token)
+  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
+  const { orders } = req.body || {}
+  if (!Array.isArray(orders)) { res.status(400).json({ error: 'orders deve ser uma lista [{name, order}].' }); return }
+  const clean = orders
+    .filter(o => o && typeof o.name === 'string' && typeof o.order === 'number')
+    .map(o => ({ name: String(o.name), order: Number(o.order) }))
+  await setFeaturedOrder(clean)
+  res.json({ ok: true, updated: clean.length })
+})
+
 router.patch('/rpgs/:name', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization
   if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
@@ -301,21 +329,6 @@ router.patch('/rpgs/:name/featured', async (req: Request, res: Response) => {
   const rpg = await toggleFeaturedRpg(String(req.params.name))
   if (!rpg) { res.status(404).json({ error: 'RPG não encontrado.' }); return }
   res.json(rpg)
-})
-
-router.patch('/rpgs/featured-order', async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization
-  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
-  const token = authHeader.replace('Bearer ', '')
-  const user = await getUserByToken(token)
-  if (!user || user.role !== 'admin') { res.status(403).json({ error: 'Apenas administradores.' }); return }
-  const { orders } = req.body || {}
-  if (!Array.isArray(orders)) { res.status(400).json({ error: 'orders deve ser uma lista [{name, order}].' }); return }
-  const clean = orders
-    .filter(o => o && typeof o.name === 'string' && typeof o.order === 'number')
-    .map(o => ({ name: String(o.name), order: Number(o.order) }))
-  await setFeaturedOrder(clean)
-  res.json({ ok: true, updated: clean.length })
 })
 
 router.delete('/rpgs/:name', async (req: Request, res: Response) => {
@@ -530,17 +543,50 @@ router.get('/posts', async (_req: Request, res: Response) => {
   res.json(await getEventPosts())
 })
 
-router.post('/posts', async (req: Request, res: Response) => {
+router.post('/posts', (req: Request, res: Response) => {
   const authHeader = req.headers.authorization
   if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
   const token = authHeader.replace('Bearer ', '')
-  const user = await getUserByToken(token)
-  if (!user) { res.status(401).json({ error: 'Sessão inválida.' }); return }
-  const { rpgName, title, content } = req.body
-  if (!rpgName || !title || !content) { res.status(400).json({ error: 'Campos obrigatórios: rpgName, title, content.' }); return }
-  if (!isCreatorOf(user, rpgName)) { res.status(403).json({ error: 'Apenas criadores do sistema podem postar eventos.' }); return }
-  const post = await addEventPost({ username: user.username, rpgName, title, content })
-  res.status(201).json(post)
+  getUserByToken(token).then(user => {
+    if (!user) { res.status(401).json({ error: 'Sessão inválida.' }); return }
+    upload.single('image')(req, res, async (err) => {
+      if (err) { res.status(400).json({ error: 'Erro no upload da imagem.' }); return }
+      const { rpgName, title, content, tags } = req.body || {}
+      if (!title || !content) { res.status(400).json({ error: 'Campos obrigatórios: title, content.' }); return }
+      const isAdmin = user.role === 'admin'
+      const geral = !rpgName || rpgName === '__geral__'
+      if (geral && !isAdmin) { res.status(403).json({ error: 'Só administradores publicam comunicados gerais.' }); return }
+      if (!geral) {
+        const rpg = await getRpgByName(String(rpgName))
+        if (!rpg) { res.status(404).json({ error: 'RPG não encontrado.' }); return }
+        if (!isCreatorOf(user, String(rpgName))) { res.status(403).json({ error: 'Apenas criadores do sistema podem postar eventos.' }); return }
+      }
+      let imageUrl: string | undefined
+      if (req.file) {
+        try { imageUrl = await uploadToCloudinary(req.file.buffer) }
+        catch { res.status(500).json({ error: 'Erro ao enviar a imagem.' }); return }
+      }
+      let parsedTags: string[] | undefined
+      if (tags !== undefined) {
+        if (typeof tags === 'string') {
+          try {
+            const j = JSON.parse(tags)
+            parsedTags = Array.isArray(j) ? j.map(String) : String(tags).split(',').map(s => s.trim()).filter(Boolean)
+          } catch { parsedTags = String(tags).split(',').map(s => s.trim()).filter(Boolean) }
+        } else if (Array.isArray(tags)) parsedTags = tags.map(String)
+        parsedTags = (parsedTags || []).map(t => t.slice(0, 30)).slice(0, 8)
+      }
+      const post = await addEventPost({
+        username: user.username,
+        rpgName: geral ? undefined : String(rpgName),
+        title: String(title).slice(0, 120),
+        content: String(content).slice(0, 5000),
+        image: imageUrl,
+        tags: parsedTags,
+      })
+      res.status(201).json(post)
+    })
+  })
 })
 
 router.delete('/posts/:id', async (req: Request, res: Response) => {
@@ -584,6 +630,49 @@ router.delete('/replies/:id', async (req: Request, res: Response) => {
   const ok = await deleteReviewReply(String(req.params.id), user.username, user.role === 'admin')
   if (!ok) { res.status(403).json({ error: 'Sem permissão ou resposta não encontrada.' }); return }
   res.json({ message: 'Resposta excluída.' })
+})
+
+// ── CHAT GLOBAL ──
+router.get('/chat', async (req: Request, res: Response) => {
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100)
+  res.json(await getChatMessages(limit))
+})
+
+router.get('/chat/ping', async (req: Request, res: Response) => {
+  const latest = await getChatLatest()
+  const since = req.query.since as string | undefined
+  res.json({ latest, hasNew: !!latest && (!since || latest > since) })
+})
+
+router.post('/chat', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Faça login para conversar.' }); return }
+  const token = authHeader.replace('Bearer ', '')
+  getUserByToken(token).then(user => {
+    if (!user) { res.status(401).json({ error: 'Sessão inválida.' }); return }
+    upload.single('image')(req, res, async (err) => {
+      if (err) { res.status(400).json({ error: 'Erro no upload da imagem.' }); return }
+      const text = String(req.body?.text || '').slice(0, 1000).trim()
+      if (!text && !req.file) { res.status(400).json({ error: 'Escreva algo ou anexe uma imagem.' }); return }
+      let imageUrl: string | undefined
+      if (req.file) {
+        try { imageUrl = await uploadToCloudinary(req.file.buffer) }
+        catch { res.status(500).json({ error: 'Erro ao enviar a imagem.' }); return }
+      }
+      const msg = await addChatMessage({ username: user.username, text, image: imageUrl })
+      res.status(201).json(msg)
+    })
+  })
+})
+
+router.delete('/chat/:id', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) { res.status(401).json({ error: 'Autenticação necessária.' }); return }
+  const user = await getUserByToken(authHeader.replace('Bearer ', ''))
+  if (!user) { res.status(401).json({ error: 'Sessão inválida.' }); return }
+  const ok = await deleteChatMessage(String(req.params.id), user.username, user.role === 'admin')
+  if (!ok) { res.status(403).json({ error: 'Sem permissão ou mensagem não encontrada.' }); return }
+  res.json({ message: 'Mensagem excluída.' })
 })
 
 // ── DENÚNCIAS ──

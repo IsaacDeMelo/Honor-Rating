@@ -7,6 +7,8 @@ export interface IReview {
   comment: string
   customImage?: string
   status: 'pending' | 'approved' | 'rejected'
+  likes: string[]
+  dislikes: string[]
   createdAt: Date
 }
 
@@ -21,6 +23,8 @@ const reviewSchema = new Schema<IReview>({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   },
+  likes: { type: [String], default: [] },
+  dislikes: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
 })
 

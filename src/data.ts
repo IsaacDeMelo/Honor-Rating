@@ -8,8 +8,9 @@ import EventPostModel from './models/EventPost'
 import ReviewReplyModel from './models/ReviewReply'
 import ReportModel from './models/Report'
 import RpgSubmissionModel from './models/RpgSubmission'
+import ChatMessageModel from './models/ChatMessage'
 import VisitModel, { VisitType } from './models/Visit'
-import { RPG, Review, ReviewInput, User, ReviewReply, EventPost } from './types'
+import { RPG, Review, ReviewInput, User, ReviewReply, EventPost, ChatMessage } from './types'
 
 export function toSlug(name: string): string {
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -63,9 +64,33 @@ function reviewFromDoc(doc: any, rpg: RPG): Review {
     comment: o.comment,
     customImage: o.customImage,
     status: o.status || 'approved',
+    likes: o.likes || [],
+    dislikes: o.dislikes || [],
     timeAgo: calcTimeAgo(o.createdAt),
     createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
   }
+}
+
+export async function toggleReviewVote(reviewId: string, username: string, vote: 'like' | 'dislike'): Promise<Review | undefined> {
+  const doc = await ReviewModel.findById(reviewId)
+  if (!doc) return undefined
+  const likes: string[] = (doc.likes || []).filter(u => u !== username)
+  const dislikes: string[] = (doc.dislikes || []).filter(u => u !== username)
+  const arr = vote === 'like' ? likes : dislikes
+  const other = vote === 'like' ? dislikes : likes
+  // Toggle: se já votou nisso, remove; senão adiciona (e tira do outro lado)
+  if ((vote === 'like' ? doc.likes || [] : doc.dislikes || []).includes(username)) {
+    doc.likes = likes
+    doc.dislikes = dislikes
+  } else {
+    arr.push(username)
+    doc.likes = vote === 'like' ? arr : other
+    doc.dislikes = vote === 'like' ? other : arr
+  }
+  await doc.save()
+  const rpg = await resolveRpg(doc.rpgName)
+  if (!rpg) return undefined
+  return reviewFromDoc(doc, rpg)
 }
 
 function userFromDoc(doc: any): User {
@@ -466,7 +491,7 @@ async function getRpgScoreMap(): Promise<Record<string, number>> {
   return map
 }
 
-function eventPostFromDoc(doc: any, rpg: RPG, score?: number): EventPost {
+function eventPostFromDoc(doc: any, rpg: RPG | null, score?: number): EventPost {
   const o = doc.toObject ? doc.toObject() : doc
   const boostHours = score !== undefined ? boostRemainingHours(o.createdAt, score) : 0
   return {
@@ -476,6 +501,7 @@ function eventPostFromDoc(doc: any, rpg: RPG, score?: number): EventPost {
     title: o.title,
     content: o.content,
     image: o.image,
+    tags: o.tags || [],
     timeAgo: calcTimeAgo(o.createdAt),
     createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
     rpgScore: score,
@@ -499,15 +525,16 @@ export async function getEventPosts(limit?: number): Promise<EventPost[]> {
     EventPostModel.find().sort({ createdAt: -1 }),
     getRpgScoreMap(),
   ])
-  const names = [...new Set(docs.map(d => d.rpgName))]
+  const names = [...new Set(docs.map(d => d.rpgName).filter(Boolean))]
   const rpgDocs = await Promise.all(names.map(n => Rpg.findOne({ name: n })))
   const rpgMap: Record<string, RPG> = {}
   for (const doc of rpgDocs) {
     if (doc) rpgMap[doc.name] = rpgFromDoc(doc)
   }
+  // Posts sem rpgName = comunicado geral (só admin): entram sem boost, por data
   const posts = docs
-    .filter(d => rpgMap[d.rpgName])
-    .map(d => eventPostFromDoc(d, rpgMap[d.rpgName], scoreMap[d.rpgName]))
+    .filter(d => !d.rpgName || rpgMap[d.rpgName])
+    .map(d => eventPostFromDoc(d, d.rpgName ? rpgMap[d.rpgName] : null, d.rpgName ? scoreMap[d.rpgName] : undefined))
   await sortEventPosts(posts)
   return limit ? posts.slice(0, limit) : posts
 }
@@ -517,13 +544,13 @@ export async function getEventPostsPaginated(skip: number, limit: number): Promi
   return all.slice(skip, skip + limit)
 }
 
-export async function addEventPost(input: { username: string; rpgName: string; title: string; content: string; image?: string }): Promise<EventPost> {
+export async function addEventPost(input: { username: string; rpgName?: string; title: string; content: string; image?: string; tags?: string[] }): Promise<EventPost> {
   const doc = await EventPostModel.create(input)
-  const rpg = (await resolveRpg(input.rpgName)) || ({} as RPG)
+  const rpg = input.rpgName ? await resolveRpg(input.rpgName) : undefined
   const ratings = await getRpgRatings()
-  const rr = ratings.find(x => x.rpg.name === input.rpgName)
+  const rr = input.rpgName ? ratings.find(x => x.rpg.name === input.rpgName) : undefined
   const score = rr ? rpgScoreFromBayesian(rr.bayesianAvg) : 0
-  return eventPostFromDoc(doc, rpg, score)
+  return eventPostFromDoc(doc, rpg || null, input.rpgName ? score : undefined)
 }
 
 export async function deleteEventPost(id: string, username: string, isAdmin: boolean): Promise<boolean> {
@@ -531,6 +558,44 @@ export async function deleteEventPost(id: string, username: string, isAdmin: boo
   if (!post) return false
   if (post.username !== username && !isAdmin) return false
   await EventPostModel.findByIdAndDelete(id)
+  return true
+}
+
+// ── CHAT GLOBAL ──
+function chatMessageFromDoc(doc: any): ChatMessage {
+  const o = doc.toObject ? doc.toObject() : doc
+  return {
+    id: String(o._id),
+    username: o.username,
+    text: o.text || '',
+    image: o.image,
+    timeAgo: calcTimeAgo(o.createdAt),
+    createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+  }
+}
+
+export async function getChatMessages(limit: number = 50): Promise<ChatMessage[]> {
+  const docs = await ChatMessageModel.find().sort({ createdAt: -1 }).limit(Math.min(limit, 100))
+  return docs.reverse().map(chatMessageFromDoc)
+}
+
+export async function getChatLatest(): Promise<string | null> {
+  const doc = await ChatMessageModel.findOne().sort({ createdAt: -1 })
+  if (!doc) return null
+  const c = doc.createdAt
+  return c instanceof Date ? c.toISOString() : String(c)
+}
+
+export async function addChatMessage(input: { username: string; text?: string; image?: string }): Promise<ChatMessage> {
+  const doc = await ChatMessageModel.create({ username: input.username, text: input.text || '', image: input.image || undefined })
+  return chatMessageFromDoc(doc)
+}
+
+export async function deleteChatMessage(id: string, username: string, isAdmin: boolean): Promise<boolean> {
+  const msg = await ChatMessageModel.findById(id)
+  if (!msg) return false
+  if (msg.username !== username && !isAdmin) return false
+  await ChatMessageModel.findByIdAndDelete(id)
   return true
 }
 
