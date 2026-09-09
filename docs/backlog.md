@@ -1,5 +1,7 @@
 # TASKS — Pendências do TypeScriptLab
 
+> Nota: documento interno de trabalho (backlog histórico). Pode conter itens já concluídos.
+
 Código de produção: `C:\Users\Administrador\Desktop\Isaac\TypeScriptLab\TypeScriptLab\` (branch main, commit caba182).
 Stack: Express 5 + TypeScript + EJS + MongoDB/Mongoose (SPA: modais + pushState, sem reload).
 

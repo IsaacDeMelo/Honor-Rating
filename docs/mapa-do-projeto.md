@@ -1,3 +1,5 @@
+> Nota: documento interno de trabalho (mapa histórico do projeto). Pode estar desatualizado em pontos — o README na raiz é a referência atual.
+
 ================================================================================
   MAPPING DO PROJETO — TypeScriptLab (Rpflix / Critique.rpg)
 ================================================================================

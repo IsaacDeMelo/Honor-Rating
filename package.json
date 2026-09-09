@@ -1,7 +1,7 @@
 {
   "name": "typescriptlab",
   "version": "1.0.0",
-  "description": "",
+  "description": "Rpflix — catálogo e comunidade de RPGs de mesa (Express + TypeScript + EJS + MongoDB)",
   "homepage": "https://github.com/IsaacDeMelo/TypeScriptLab#readme",
   "bugs": {
     "url": "https://github.com/IsaacDeMelo/TypeScriptLab/issues"
@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "npx tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
     "build": "mkdir -p dist/views dist/public && cp src/views/*.ejs dist/views/ 2>/dev/null || true && cp -r src/public/* dist/public/ 2>/dev/null || true",
     "migrate": "npx tsx src/migrate.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
