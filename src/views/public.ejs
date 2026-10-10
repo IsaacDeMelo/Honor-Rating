@@ -795,7 +795,8 @@ const seoCount = seoRevs.length;
         const heroRpgs = heroLimited.concat(heroFeatured).length ? heroLimited.concat(heroFeatured) : (rpgs[0] ? [rpgs[0]] : []);
         %>
         <div id="cat-hero-container" class="relative h-[55vh] min-h-[360px] overflow-hidden cursor-pointer" onmouseenter="pausarHero()" onmouseleave="retomarHero()" onclick="heroClicar()">
-          <div id="cat-banner" class="cat-banner cat-banner-zoom absolute inset-0 bg-cover bg-center" style="background-image: url('<%= heroRpgs[0].banner %>'); transition: opacity 0.3s ease;"></div>
+          <div id="cat-banner-blur" class="absolute inset-0" style="background-size:cover;background-position:center;filter:blur(24px) brightness(0.45);transform:scale(1.1);opacity:0;transition:opacity 0.3s ease;"></div>
+          <div id="cat-banner" class="cat-banner cat-banner-zoom absolute inset-0 bg-cover bg-center" style="background-image: url('<%= heroRpgs[0].banner || heroRpgs[0].image %>'); background-repeat: no-repeat; transition: opacity 0.3s ease;"></div>
           <div class="absolute inset-0" style="background: linear-gradient(to top, var(--bg-primary) 0%, transparent 55%, rgba(0,0,0,0.5) 100%);"></div>
           <div class="absolute inset-0" style="background: linear-gradient(to right, rgba(0,0,0,0.5) 0%, transparent 100%);"></div>
 
@@ -2254,9 +2255,25 @@ const seoCount = seoRevs.length;
       const slide = heroSlides[index];
       if (!slide) return;
       const banner = document.getElementById('cat-banner');
+      const blur = document.getElementById('cat-banner-blur');
       banner.style.opacity = '0';
+      if (blur) blur.style.opacity = '0';
       setTimeout(() => {
-        banner.style.backgroundImage = `url('${slide.type === 'ad' ? slide.data.image : slide.data.banner}')`;
+        const img = slide.type === 'ad' ? slide.data.image : (slide.data.banner || slide.data.image);
+        // Teatro (só PC): sem banner OU banner vertical/inadequado (proporção < 1.2) —
+        // mostra a imagem inteira com fundo escuro borrado nas laterais
+        const ratio = slide._ratio || (16 / 9);
+        const teatro = slide.type !== 'ad' && window.matchMedia('(min-width: 1024px)').matches && (!slide.data.banner || ratio < 1.2);
+        if (blur) {
+          if (teatro) {
+            blur.style.backgroundImage = `url('${img}')`;
+            blur.style.opacity = '1';
+          } else {
+            blur.style.opacity = '0';
+          }
+        }
+        banner.style.backgroundImage = `url('${img}')`;
+        banner.style.backgroundSize = teatro ? 'contain' : 'cover';
         banner.style.opacity = '1';
         banner.classList.remove('cat-banner-zoom');
         void banner.offsetWidth;
@@ -3659,14 +3676,14 @@ const seoCount = seoRevs.length;
         const res = await fetch('/api/chat?limit=50');
         if (!res.ok) throw 0;
         const msgs = await res.json();
-        const eu = getUser()?.username;
+        const eu = (getUser()?.username || '').trim().toLowerCase();
         if (!msgs.length) {
           box.innerHTML = '<p class="text-[11px] text-center py-8" style="color:var(--text-muted);">Nenhuma mensagem ainda. Puxe assunto!</p>';
           return;
         }
         const pertoDoFim = (box.scrollHeight - box.scrollTop - box.clientHeight) < 120;
         box.innerHTML = msgs.map(m => {
-          const minha = eu && m.username === eu;
+          const minha = eu && String(m.username || '').trim().toLowerCase() === eu;
           const u = catUsersData.find(x => x.username === m.username);
           const avatar = u?.avatar;
           const initial = m.username.charAt(0).toUpperCase();
@@ -3681,6 +3698,7 @@ const seoCount = seoRevs.length;
               ${m.image ? `<a href="${m.image}" target="_blank" rel="noopener"><img src="${m.image}" class="rounded-xl mb-1 w-full max-h-52 object-cover" loading="lazy" alt=""></a>` : ''}
               ${m.text ? `<p class="text-[12px] leading-relaxed break-words" style="color:${minha ? '#fff' : 'var(--text-primary)'};">${formatChatText(m.text)}</p>` : ''}
               <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                ${minha ? '<span class="text-[8px] font-bold uppercase" style="color:rgba(255,255,255,.7);">Você</span>' : ''}
                 <span class="text-[8px]" style="color:${minha ? 'rgba(255,255,255,.7)' : 'var(--text-muted)'};">${hora}</span>
                 ${minha || getUser()?.role === 'admin' ? `<button onclick="deletarChatMsg('${m.id}')" class="text-[8px] opacity-60 hover:opacity-100" style="color:${minha ? '#fff' : 'var(--text-muted)'};" title="Apagar"><i class="fa-solid fa-trash"></i></button>` : ''}
               </div>
@@ -4267,6 +4285,22 @@ const seoCount = seoRevs.length;
     function atualizarHero() {
       heroSlides = buildHeroSlides(catRpgData, catAdsData);
       heroIndex = 0;
+      // Pré-carrega dimensões para detectar banner vertical/inadequado (modo teatro)
+      heroSlides.forEach(slide => {
+        if (slide._ratio) return;
+        slide._ratio = 16 / 9;
+        const url = slide.type === 'ad' ? slide.data.image : (slide.data.banner || slide.data.image);
+        if (!url) return;
+        const probe = new Image();
+        probe.onload = () => {
+          if (probe.naturalWidth && probe.naturalHeight) {
+            slide._ratio = probe.naturalWidth / probe.naturalHeight;
+            // Se o slide atual revelou-se inadequado, reaplica o modo certo na hora
+            if (heroSlides[heroIndex] === slide) heroIrPara(null, heroIndex);
+          }
+        };
+        probe.src = url;
+      });
       heroIrPara(null, 0);
       const dots = document.getElementById('hero-dots');
       if (heroSlides.length < 2) {

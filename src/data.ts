@@ -1024,7 +1024,8 @@ export async function cleanupOrphans(): Promise<{ reviews: number; replies: numb
   }
   const [rev, posts, visits] = await Promise.all([
     ReviewModel.deleteMany({ rpgName: { $nin: [...valid] } }),
-    EventPostModel.deleteMany({ rpgName: { $nin: [...valid] } }),
+    // $exists: posts "geral" (sem rpgName) são válidos e não podem cair no $nin
+    EventPostModel.deleteMany({ rpgName: { $exists: true, $nin: [...valid] } }),
     // Só rpgview tem campo rpg: sem o type, o $nin apagaria pageview/search (sem campo rpg)
     VisitModel.deleteMany({ type: 'rpgview', rpg: { $nin: [...valid] } }),
   ])
